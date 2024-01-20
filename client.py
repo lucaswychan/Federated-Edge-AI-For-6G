@@ -2,10 +2,14 @@ from algorithm import Algorithm
 import torch
 
 class Client(object):
-    def __init__(self, algorithm):
+    def __init__(self, algorithm, device, weight, train_data_X, train_data_Y, model, client_param):
         self.algorithm: Algorithm = algorithm
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device               = device
+        self.weight               = weight
+        self.train_data_X         = train_data_X
+        self.train_data_Y         = train_data_Y
+        self.model                = model
+        self.client_param         = client_param
         
-    def local_train(self):
-        params = {}
-        self.algorithm.local_train(params)
+    def local_train(self, inputs: dict):
+        self.algorithm.local_train(self, inputs)
