@@ -1,8 +1,11 @@
-import numpy as np
-from torch.utils import data
-from dataset import Dataset
-import torch
 import copy
+
+import numpy as np
+import torch
+from torch.utils import data
+
+from dataset import Dataset
+
 
 def get_mdl_params(model_list, n_par=None):
     

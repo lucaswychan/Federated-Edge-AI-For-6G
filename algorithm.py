@@ -1,11 +1,13 @@
+import copy
 from abc import abstractmethod
 
-from client import Client
-from utils import *
-from dataset import Dataset
-import copy
 import torch
 from torch.utils import data
+
+from client import Client
+from dataset import Dataset
+from utils import *
+
 
 class Algorithm:
     def __init__(self, name, act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per):

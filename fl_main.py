@@ -1,12 +1,14 @@
-from client import Client
-from server import Server
-from dataset import DatasetObject
-from algorithm import FedDyn
-from model import Model
-from utils import *
+import copy
+
 import numpy as np
 import torch
-import copy
+
+from algorithm import FedDyn
+from client import Client
+from dataset import DatasetObject
+from model import Model
+from server import Server
+from utils import *
 
 n_clients = 10 # number of clients
 
