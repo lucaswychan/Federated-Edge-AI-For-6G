@@ -8,9 +8,10 @@ import numpy as np
 import torch
 import copy
 
-n_clients = 10
-data_obj = DatasetObject(dataset='CIFAR10', n_client=n_clients, rule='iid', unbalanced_sgm=0)
+n_clients = 10 # number of clients
 
+# data for train and test
+data_obj = DatasetObject(dataset='CIFAR10', n_client=n_clients, rule='iid', unbalanced_sgm=0)
 client_x_all = data_obj.clnt_x
 client_y_all = data_obj.clnt_y
 cent_x = np.concatenate(client_x_all, axis=0)
@@ -24,29 +25,36 @@ dataset      = data_obj.dataset
 weight_list = np.asarray([len(client_y_all[i]) for i in range(n_clients)])
 weight_list = weight_list / np.sum(weight_list) * n_clients
 
+# global parameters
 model_name           = 'cifar10' # Model type
-algorithm            = FedDyn()
-algorithm_name       = algorithm.name
 communication_rounds = 3
-save_period          = 1
-weight_decay         = 1e-3
-batch_size           = 50
-act_prob             = 0.4
-lr_decay_per_round   = 1
-epoch                = 5
-learning_rate        = 0.1
-print_per            = 5
 rand_seed            = 0
-alpha_coef           = 1e-2
 device               = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print('Device: %s' %device)
 
-model_func = lambda : Model(model_name)
-init_model = model_func()
-init_par_list = get_mdl_params([init_model])[0]
-n_param = len(init_par_list)
+# algorithm parameters
+act_prob             = 0.4
+learning_rate        = 0.1
+lr_decay_per_round   = 1
+batch_size           = 50
+epoch                = 5
+weight_decay         = 1e-3
+model_func           = lambda : Model(model_name)
+init_model           = model_func()
+save_period          = 1
+print_per            = 5
+
+init_par_list        = get_mdl_params([init_model])[0] # parameters of the initial model
+n_param              = len(init_par_list)
+
+# FedDyn parameters
+alpha_coef           = 1e-2
+max_norm             = 10
+
+algorithm            = FedDyn(act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per, alpha_coef, max_norm)
+algorithm_name       = algorithm.name
 
 ###
+# FL system components
 
 clients_list = np.array([Client(algorithm=algorithm,
                                 device=device, 
@@ -84,7 +92,8 @@ cloud_model = model_func().to(device)
 cloud_model.load_state_dict(copy.deepcopy(dict(init_model.named_parameters())))
 cloud_model_param = get_mdl_params([cloud_model], n_param)[0]
 
-print("Training starts with algorithm: %s" %algorithm_name)
+print('\nDevice: %s' %device)
+print("Training starts with algorithm: %s\n" %algorithm_name)
 
 for t in range(communication_rounds):
 
@@ -112,21 +121,7 @@ for t in range(communication_rounds):
         print('---- Training client %d' %selected_clnts_idx[i])
         
         feddyn_inputs = {
-            "data_obj": data_obj, 
-            "act_prob": act_prob, 
-            "learning_rate": learning_rate, 
-            "batch_size": batch_size, 
-            "epoch": epoch, 
-            "communication_rounds": communication_rounds, 
             "curr_round": t,
-            "print_per": print_per, 
-            "weight_decay": weight_decay,  
-            "model_func": model_func, 
-            "init_model": init_model, 
-            "alpha_coef": alpha_coef, 
-            "save_period": save_period, 
-            "lr_decay_per_round": lr_decay_per_round, 
-            "n_param": n_param,
             "cloud_model": cloud_model,
             "cloud_model_param_tensor": cloud_model_param_tensor,
             "cloud_model_param": cloud_model_param,
@@ -139,14 +134,13 @@ for t in range(communication_rounds):
         "clients_list": clients_list,
         "selected_clnts_idx": selected_clnts_idx,
         "local_param_list": local_param_list,
-        "model_func": model_func, 
         "avg_model": avg_model,
         "all_model": all_model,
         "cloud_model": cloud_model,
         "cloud_model_param": cloud_model_param
     }
     
-    server.update(inputs)
+    server.aggregate(inputs)
     
     avg_model = inputs["avg_model"]
     all_model = inputs["all_model"]

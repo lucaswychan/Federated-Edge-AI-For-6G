@@ -1,9 +1,6 @@
-from algorithm import Algorithm
-import torch
-
 class Client(object):
     def __init__(self, algorithm, device, weight, train_data_X, train_data_Y, model, client_param):
-        self.algorithm: Algorithm = algorithm
+        self.algorithm            = algorithm
         self.device               = device
         self.weight               = weight
         self.train_data_X         = train_data_X
