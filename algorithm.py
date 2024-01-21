@@ -1,5 +1,4 @@
 from abc import abstractmethod
-from client import Client
 from model import Model
 from utils import *
 from dataset import Dataset
@@ -16,6 +15,10 @@ class Algorithm:
         pass
     
     @abstractmethod
+    def update(self):
+        pass
+    
+    @abstractmethod
     def local_eval(self):
         pass
 
@@ -26,29 +29,30 @@ class FedDyn(Algorithm):
         self.name = "FedDyn"
         self.max_norm = 10
     
-    def local_train(self, client: Client, inputs: dict):
+    def local_train(self, client, inputs: dict):
         model = client.model
         trn_x = client.train_data_X
         trn_y = client.train_data_Y
         self.device = client.device
 
-        client.model = inputs.model_func().to(self.device)
+        client.model = inputs["model_func"]().to(self.device)
         model = client.model # = self.model
         # Warm start from current avg model
-        model.load_state_dict(copy.deepcopy(dict(inputs.cloud_model.named_parameters())))
+        model.load_state_dict(copy.deepcopy(dict(inputs["cloud_model"].named_parameters())))
         for params in model.parameters():
             params.requires_grad = True
 
         # Scale down
-        alpha_coef_adpt = inputs.alpha_coef / client.weight # adaptive alpha coef
-        local_param_list_curr = torch.tensor(inputs.local_param, dtype=torch.float32, device=self.device) # = local_grad_vector
+        alpha_coef_adpt = inputs["alpha_coef"] / client.weight # adaptive alpha coef
+        local_param_list_curr = torch.tensor(inputs["local_param"], dtype=torch.float32, device=self.device) # = local_grad_vector
         print("local_param_list_curr = ", local_param_list_curr)
-        print("cloud_model_param_tensor = ", inputs.cloud_model_param_tensor)
-        client.model = self.train_model(model, inputs.model_func, alpha_coef_adpt, inputs.cloud_model_param_tensor, local_param_list_curr, trn_x, trn_y, inputs.learning_rate * (inputs.lr_decay_per_round ** i), inputs.batch_size, inputs.epoch, inputs.print_per, inputs.weight_decay, inputs.data_obj.dataset)
-        curr_model_par = get_mdl_params([client.model], inputs.n_param)[0] # get the model parameter after running FedDyn
+        print("cloud_model_param_tensor = ", inputs["cloud_model_param_tensor"])
+        client.model = self.train_model(model, inputs["model_func"], alpha_coef_adpt, inputs["cloud_model_param_tensor"], local_param_list_curr, trn_x, trn_y, inputs["learning_rate"] * (inputs["lr_decay_per_round"] ** inputs["curr_round"]), inputs["batch_size"], inputs["epoch"], inputs["print_per"], inputs["weight_decay"], inputs["data_obj"].dataset)
+        curr_model_par = get_mdl_params([client.model], inputs["n_param"])[0] # get the model parameter after running FedDyn
+        print("curr_model_par = ", curr_model_par)
 
         # No need to scale up hist terms. They are -\nabla/alpha and alpha is already scaled.
-        inputs.local_param += curr_model_par - inputs.cloud_model_param  # after training, dynamically update the weight withthe cloud model parameters
+        inputs["local_param"] += curr_model_par - inputs["cloud_model_param"]  # after training, dynamically update the weight withthe cloud model parameters
         client.client_param = curr_model_par
     
     
@@ -110,6 +114,19 @@ class FedDyn(Algorithm):
         model.eval()
                 
         return model
+
+    def update(self, inputs: dict):
+        clients_list = inputs["clients_list"]
+        all_clients_param_list = np.array([client.client_param for client in clients_list])
+        
+        avg_mdl_param = np.mean(all_clients_param_list[inputs["selected_clnts_idx"]], axis = 0)
+        inputs["cloud_model_param"] = avg_mdl_param + np.mean(inputs["local_param_list"], axis=0)
+        
+        device = clients_list[0].device
+
+        inputs["avg_model"] = set_client_from_params(inputs["model_func"](), avg_mdl_param, device)
+        inputs["all_model"] = set_client_from_params(inputs["model_func"](), np.mean(all_clients_param_list, axis = 0), device)
+        inputs["cloud_model"] = set_client_from_params(inputs["model_func"]().to(device), inputs["cloud_model_param"], device) 
         
     
     def local_eval(self, inputs: dict):
