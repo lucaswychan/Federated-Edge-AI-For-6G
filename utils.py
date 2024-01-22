@@ -7,7 +7,7 @@ from torch.utils import data
 from dataset import Dataset
 
 
-def get_mdl_params(model_list, n_par=None):
+def get_model_params(model_list, n_par=None):
     
     if n_par==None:
         exp_mdl = model_list[0]
@@ -63,7 +63,7 @@ def get_acc_loss(data_x, data_y, model, dataset_name, device, w_decay = None):
     loss_overall /= n_tst
     if w_decay != None:
         # Add L2 loss
-        params = get_mdl_params([model], n_par=None)
+        params = get_model_params([model], n_par=None)
         loss_overall += w_decay/2 * np.sum(params * params)
         
     model.train()

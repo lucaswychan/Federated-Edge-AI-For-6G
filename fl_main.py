@@ -45,7 +45,7 @@ init_model           = model_func()
 save_period          = 1
 print_per            = 5
 
-init_par_list        = get_mdl_params([init_model])[0] # parameters of the initial model
+init_par_list        = get_model_params([init_model])[0] # parameters of the initial model
 n_param              = len(init_par_list)
 
 # FedDyn parameters
@@ -92,7 +92,7 @@ all_model.load_state_dict(copy.deepcopy(dict(init_model.named_parameters())))
 # cloud (server) model
 cloud_model = model_func().to(device)
 cloud_model.load_state_dict(copy.deepcopy(dict(init_model.named_parameters())))
-cloud_model_param = get_mdl_params([cloud_model], n_param)[0]
+cloud_model_param = get_model_params([cloud_model], n_param)[0]
 
 print('\nDevice: %s' %device)
 print("Training starts with algorithm: %s\n" %algorithm_name)
@@ -100,23 +100,22 @@ print("Training starts with algorithm: %s\n" %algorithm_name)
 for t in range(communication_rounds):
 
     # random client selection
-    inc_seed = 0
-    while(True):
+    control_seed = 0
+    selected_clnts = []
+    while len(selected_clnts) == 0:
         # Fix randomness in client selection
-        np.random.seed(t + rand_seed + inc_seed)
+        np.random.seed(t + rand_seed + control_seed)
         act_list    = np.random.uniform(size=n_clients)
         act_clients = act_list <= act_prob
         selected_clnts_idx = np.sort(np.where(act_clients)[0])
         selected_clnts = clients_list[selected_clnts_idx]
-        inc_seed += 1
-        if len(selected_clnts) != 0:
-            break
+        control_seed += 1
+    
     print('Selected Clients: %s' %(', '.join(['%2d' %clnt for clnt in selected_clnts_idx])))
     
     cloud_model_param_tensor = torch.tensor(cloud_model_param, dtype=torch.float32, device=device)
     
     ###
-    feddyn_inputs = {}
     # partial training
     for i, client in enumerate(selected_clnts):
         # Train locally 

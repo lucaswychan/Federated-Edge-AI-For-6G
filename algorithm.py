@@ -45,8 +45,8 @@ class FedDyn(Algorithm):
         self.alpha_coef = alpha_coef
         self.max_norm   = max_norm
     
+    # override
     def local_train(self, client: Client, inputs: dict):
-        model = client.model
         trn_x = client.train_data_X
         trn_y = client.train_data_Y
         self.device = client.device
@@ -64,11 +64,11 @@ class FedDyn(Algorithm):
         print("local_param_list_curr = ", local_param_list_curr)
         print("cloud_model_param_tensor = ", inputs["cloud_model_param_tensor"])
         client.model = self.train_model(model, alpha_coef_adpt, inputs["cloud_model_param_tensor"], local_param_list_curr, trn_x, trn_y, inputs["curr_round"])
-        curr_model_par = get_mdl_params([client.model], self.n_param)[0] # get the model parameter after running FedDyn
+        curr_model_par = get_model_params([client.model], self.n_param)[0] # get the model parameter after running FedDyn
         print("curr_model_par = ", curr_model_par)
 
         # No need to scale up hist terms. They are -\nabla/alpha and alpha is already scaled.
-        inputs["local_param"] += curr_model_par - inputs["cloud_model_param"]  # after training, dynamically update the weight withthe cloud model parameters
+        inputs["local_param"] += curr_model_par - inputs["cloud_model_param"]  # after training, dynamically update the weight with the cloud model parameters
         client.client_param = curr_model_par
     
     
@@ -78,12 +78,10 @@ class FedDyn(Algorithm):
         
         n_trn = trn_x.shape[0]
         trn_gen = data.DataLoader(Dataset(trn_x, trn_y, train=True, dataset_name=dataset_name), batch_size=self.batch_size, shuffle=True)
-        loss_fn = torch.nn.CrossEntropyLoss(reduction='sum')
+        loss_fn = torch.nn.CrossEntropyLoss(reduction="sum")
         
         optimizer = torch.optim.SGD(model.parameters(), lr=decayed_learning_rate, weight_decay=alpha_coef_adpt+self.weight_decay)
         model.train(); model = model.to(self.device)
-        
-        n_par = get_mdl_params([self.model_func()]).shape[1]
         
         for e in range(self.epoch):
             # Training
@@ -122,7 +120,7 @@ class FedDyn(Algorithm):
                 epoch_loss /= n_trn
                 if self.weight_decay != None:
                     # Add L2 loss to complete f_i
-                    params = get_mdl_params([model], n_par)
+                    params = get_model_params([model], self.n_param)
                     epoch_loss += (alpha_coef_adpt + self.weight_decay) / 2 * np.sum(params * params)
                 print("Epoch %3d, Training Loss: %.4f" %(e+1, epoch_loss))
                 model.train()
@@ -134,6 +132,7 @@ class FedDyn(Algorithm):
                 
         return model
 
+    # override
     def aggregate(self, inputs: dict):
         clients_list = inputs["clients_list"]
         all_clients_param_list = np.array([client.client_param for client in clients_list])
@@ -153,10 +152,15 @@ class FedDyn(Algorithm):
 ###
 
 class FedAvg(Algorithm):
-    def __init__(self):
-        self.name = "FedAvg"
+    def __init__(self, act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per):
+        super().__init__("FedAvg", act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per)
     
-    def local_train(self, inputs: dict):
+    # override
+    def local_train(self, client: Client, inputs: dict):
+        pass
+    
+    # override
+    def aggregate(self, inputs: dict):
         pass
     
     def local_eval(self, inputs: dict):
@@ -165,10 +169,15 @@ class FedAvg(Algorithm):
 ###
 
 class FedProx(Algorithm):
-    def __init__(self):
-        self.name = "FedProx"
+    def __init__(self, act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per):
+        super().__init__("FedProx", act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per)
     
-    def local_train(self, inputs: dict):
+    # override
+    def local_train(self, client: Client, inputs: dict):
+        pass
+    
+    # override
+    def aggregate(self, inputs: dict):
         pass
     
     def local_eval(self, inputs: dict):
