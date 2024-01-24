@@ -25,6 +25,24 @@ class Algorithm:
         self.save_period        = save_period
         self.print_per          = print_per
         
+
+    def evaluate(self, data_obj, cent_x, cent_y, avg_model, all_model, device, tst_perf_sel, trn_perf_sel, tst_perf_all, trn_perf_all, t):
+        loss_tst, acc_tst = get_acc_loss(data_obj.tst_x, data_obj.tst_y, avg_model, data_obj.dataset, device)
+        tst_perf_sel[t] = [loss_tst, acc_tst]
+        print("\n**** Communication sel %3d, Test Accuracy: %.4f, Loss: %.4f" %(t+1, acc_tst, loss_tst))
+
+        loss_tst, acc_tst = get_acc_loss(cent_x, cent_y, avg_model, data_obj.dataset, device)
+        trn_perf_sel[t] = [loss_tst, acc_tst]
+        print("**** Communication sel %3d, Cent Accuracy: %.4f, Loss: %.4f" %(t+1, acc_tst, loss_tst))
+
+        loss_tst, acc_tst = get_acc_loss(data_obj.tst_x, data_obj.tst_y, all_model, data_obj.dataset, device)
+        tst_perf_all[t] = [loss_tst, acc_tst]
+        print("**** Communication all %3d, Test Accuracy: %.4f, Loss: %.4f" %(t+1, acc_tst, loss_tst))
+
+        loss_tst, acc_tst = get_acc_loss(cent_x, cent_y, all_model, data_obj.dataset, device)
+        trn_perf_all[t] = [loss_tst, acc_tst]
+        print("**** Communication all %3d, Cent Accuracy: %.4f, Loss: %.4f\n" %(t+1, acc_tst, loss_tst))
+
     @abstractmethod
     def local_train(self):
         pass
@@ -32,11 +50,6 @@ class Algorithm:
     @abstractmethod
     def aggregate(self):
         pass
-    
-    @abstractmethod
-    def local_eval(self):
-        pass
-
 ###
 
 class FedDyn(Algorithm):
@@ -63,7 +76,7 @@ class FedDyn(Algorithm):
         local_param_list_curr = torch.tensor(inputs["local_param"], dtype=torch.float32, device=self.device) # = local_grad_vector
         print("local_param_list_curr = ", local_param_list_curr)
         print("cloud_model_param_tensor = ", inputs["cloud_model_param_tensor"])
-        client.model = self.train_model(model, alpha_coef_adpt, inputs["cloud_model_param_tensor"], local_param_list_curr, trn_x, trn_y, inputs["curr_round"])
+        client.model = self._train_model(model, alpha_coef_adpt, inputs["cloud_model_param_tensor"], local_param_list_curr, trn_x, trn_y, inputs["curr_round"])
         curr_model_par = get_model_params([client.model], self.n_param)[0] # get the model parameter after running FedDyn
         print("curr_model_par = ", curr_model_par)
 
@@ -72,7 +85,7 @@ class FedDyn(Algorithm):
         client.client_param = curr_model_par
     
     
-    def train_model(self, model, alpha_coef_adpt, avg_mdl_param, local_grad_vector, trn_x, trn_y, curr_round):
+    def _train_model(self, model, alpha_coef_adpt, avg_mdl_param, local_grad_vector, trn_x, trn_y, curr_round):
         decayed_learning_rate = self.learning_rate * (self.lr_decay_per_round ** curr_round)
         dataset_name = self.data_obj.dataset
         
@@ -145,9 +158,6 @@ class FedDyn(Algorithm):
         inputs["avg_model"] = set_client_from_params(self.model_func(), avg_mdl_param, device)
         inputs["all_model"] = set_client_from_params(self.model_func(), np.mean(all_clients_param_list, axis = 0), device)
         inputs["cloud_model"] = set_client_from_params(self.model_func().to(device), inputs["cloud_model_param"], device) 
-        
-    def local_eval(self, inputs: dict):
-        pass 
 
 ###
 
@@ -162,9 +172,6 @@ class FedAvg(Algorithm):
     # override
     def aggregate(self, inputs: dict):
         pass
-    
-    def local_eval(self, inputs: dict):
-        pass
 
 ###
 
@@ -178,7 +185,4 @@ class FedProx(Algorithm):
     
     # override
     def aggregate(self, inputs: dict):
-        pass
-    
-    def local_eval(self, inputs: dict):
         pass

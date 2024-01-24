@@ -1,4 +1,5 @@
 import copy
+import os
 
 import numpy as np
 import torch
@@ -29,12 +30,12 @@ weight_list = weight_list / np.sum(weight_list) * n_clients
 
 # global parameters
 model_name           = 'cifar10' # Model type
-communication_rounds = 3
+communication_rounds = 10
 rand_seed            = 0
 device               = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # algorithm parameters
-act_prob             = 0.4
+act_prob             = 0.6
 learning_rate        = 0.1
 lr_decay_per_round   = 1
 batch_size           = 50
@@ -53,7 +54,6 @@ alpha_coef           = 1e-2
 max_norm             = 10
 
 algorithm            = FedDyn(act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per, alpha_coef, max_norm)
-algorithm_name       = algorithm.name
 
 ###
 # FL system components
@@ -73,11 +73,6 @@ server = Server(algorithm=algorithm)
 
 local_param_list = np.zeros((n_clients, n_param)).astype('float32')
 
-n_save_instances = int(communication_rounds / save_period)
-fed_mdls_sel = list(range(n_save_instances)) # Avg active clients
-fed_mdls_all = list(range(n_save_instances)) # Avg all clients
-fed_mdls_cld = list(range(n_save_instances)) # Cloud models 
-
 trn_perf_sel = np.zeros((communication_rounds, 2)); trn_perf_all = np.zeros((communication_rounds, 2))
 tst_perf_sel = np.zeros((communication_rounds, 2)); tst_perf_all = np.zeros((communication_rounds, 2))
 
@@ -94,8 +89,20 @@ cloud_model = model_func().to(device)
 cloud_model.load_state_dict(copy.deepcopy(dict(init_model.named_parameters())))
 cloud_model_param = get_model_params([cloud_model], n_param)[0]
 
+###
+
+if not os.path.exists('Output/%s/%s_init_mdl.pt' %(data_obj.name, model_name)):
+    print("New directory!")
+    os.mkdir('Output/%s/' %(data_obj.name))
+    torch.save(init_model.state_dict(), 'Output/%s/%s_init_mdl.pt' %(data_obj.name, model_name))
+else:
+    # Load model
+    init_model.load_state_dict(torch.load('Output/%s/%s_init_mdl.pt' %(data_obj.name, model_name)))   
+
+###
+
 print('\nDevice: %s' %device)
-print("Training starts with algorithm: %s\n" %algorithm_name)
+print("Training starts with algorithm: %s\n" %algorithm.name)
 
 for t in range(communication_rounds):
 
@@ -128,7 +135,9 @@ for t in range(communication_rounds):
             "cloud_model_param": cloud_model_param,
             "local_param": local_param_list[selected_clnts_idx[i]]
         }
+        
         client.local_train(feddyn_inputs)
+        
         local_param_list[selected_clnts_idx[i]] = feddyn_inputs["local_param"]
     
     inputs = {
@@ -148,27 +157,6 @@ for t in range(communication_rounds):
     cloud_model = inputs["cloud_model"]
     cloud_model_param = inputs["cloud_model_param"]
 
-    ###
-    loss_tst, acc_tst = get_acc_loss(data_obj.tst_x, data_obj.tst_y, avg_model, data_obj.dataset, device)
-    tst_perf_sel[t] = [loss_tst, acc_tst]
-    print("**** Communication sel %3d, Test Accuracy: %.4f, Loss: %.4f" %(t+1, acc_tst, loss_tst))
-    ###
-    loss_tst, acc_tst = get_acc_loss(cent_x, cent_y, avg_model, data_obj.dataset, device)
-    trn_perf_sel[t] = [loss_tst, acc_tst]
-    print("**** Communication sel %3d, Cent Accuracy: %.4f, Loss: %.4f" %(t+1, acc_tst, loss_tst))
-    ###
-    loss_tst, acc_tst = get_acc_loss(data_obj.tst_x, data_obj.tst_y, all_model, data_obj.dataset, device)
-    tst_perf_all[t] = [loss_tst, acc_tst]
-    print("**** Communication all %3d, Test Accuracy: %.4f, Loss: %.4f" %(t+1, acc_tst, loss_tst))
-    ###
-    loss_tst, acc_tst = get_acc_loss(cent_x, cent_y, all_model, data_obj.dataset, device)
-    trn_perf_all[t] = [loss_tst, acc_tst]
-    print("**** Communication all %3d, Cent Accuracy: %.4f, Loss: %.4f" %(t+1, acc_tst, loss_tst))
-    
-    if ((t+1) % save_period == 0):
-        fed_mdls_sel[t//save_period] = avg_model
-        fed_mdls_all[t//save_period] = all_model
-        fed_mdls_cld[t//save_period] = cloud_model
-    # 3. Each client sends local model to server
-    # 4. Server aggregates all local models into global model
-    # 5. Repeat
+    server.evaluate(data_obj, cent_x, cent_y, avg_model, all_model, device, tst_perf_sel, trn_perf_sel, tst_perf_all, trn_perf_all, t)
+
+plot_performance(communication_rounds, tst_perf_sel, algorithm.name, data_obj.name)
