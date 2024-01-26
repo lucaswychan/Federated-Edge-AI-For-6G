@@ -10,6 +10,7 @@ from dataset import DatasetObject
 from model import Model
 from server import Server
 from utils import *
+from optimize import *
 
 n_clients = 10 # number of clients
 
@@ -54,6 +55,25 @@ alpha_coef           = 1e-2
 max_norm             = 10
 
 algorithm            = FedDyn(act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per, alpha_coef, max_norm)
+
+###
+# Channel setup
+
+alpha_direct = 3.76  # PL = path loss component
+# User-BS Path loss exponent
+fc = 915 * 10**6  # carrier frequency, wavelength lambda=3.0*10**8/fc
+BS_Gain = 10 ** (5.0 / 10)  # BS antenna gain
+RIS_Gain = 10 ** (5.0 / 10)  # RIS antenna gain
+User_Gain = 10 ** (0.0 / 10)  # User antenna gain
+d_RIS = 1.0 / 10  # dimension length of RIS element/wavelength
+BS = np.array([-50, 0, 10])
+RIS = np.array([0, 0, 10])
+
+range = 20
+x0 = np.ones([n_clients], dtype=int)
+Jmax = 50
+
+SCA_Gibbs = np.ones([Jmax + 1, communication_rounds]) * np.nan
 
 ###
 # FL system components
@@ -157,6 +177,7 @@ for t in range(communication_rounds):
     cloud_model = inputs["cloud_model"]
     cloud_model_param = inputs["cloud_model_param"]
 
-    server.evaluate(data_obj, cent_x, cent_y, avg_model, all_model, device, tst_perf_sel, trn_perf_sel, tst_perf_all, trn_perf_all, t)
+    # get the test accuracy
+    algorithm.evaluate(data_obj, cent_x, cent_y, avg_model, all_model, device, tst_perf_sel, trn_perf_sel, tst_perf_all, trn_perf_all, t)
 
 plot_performance(communication_rounds, tst_perf_sel, algorithm.name, data_obj.name)
