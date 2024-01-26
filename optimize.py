@@ -171,7 +171,6 @@ class Gibbs:
                 x_sam[m] = copy.deepcopy((x_sam[m] + 1) % 2)
                 X_sample[m + 1, :] = copy.deepcopy(x_sam)
                 Temp[m + 1], _, f_loop[m + 1], theta_loop[m + 1] = self.find_obj_inner(
-                    libopt,
                     x_sam,
                     K,
                     K2,
