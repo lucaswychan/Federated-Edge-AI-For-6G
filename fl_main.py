@@ -3,6 +3,7 @@ import os
 
 import numpy as np
 import torch
+import time
 
 from algorithm import FedDyn
 from client import Client
@@ -12,7 +13,7 @@ from server import Server
 from utils import *
 from optimize import *
 
-n_clients = 10 # number of clients
+n_clients = 100 # number of clients
 
 # data for train and test
 data_obj = DatasetObject(dataset='CIFAR10', n_client=n_clients, rule='iid', unbalanced_sgm=0)
@@ -69,10 +70,21 @@ d_RIS = 1.0 / 10  # dimension length of RIS element/wavelength
 BS = np.array([-50, 0, 10])
 RIS = np.array([0, 0, 10])
 
-range = 20
-x0 = np.ones([n_clients], dtype=int)
-Jmax = 50
+SNR = 90.0
 
+location_range = 20
+x0 = np.ones([n_clients], dtype=int)
+
+n_receive_antennas = 5
+n_RIS_ele = 40
+Jmax = 50
+tau = 1
+nit = 100
+threshold = 1e-2
+K = np.asarray([len(client_y_all[i]) for i in range(n_clients)])
+
+gibbs = Gibbs(n_clients=n_clients, n_receive_antennas=n_receive_antennas, n_RIS_ele=n_RIS_ele, Jmax=Jmax, K=K, RISON=True, tau=tau, nit=nit, threshold=threshold)
+print("K = ", K)
 SCA_Gibbs = np.ones([Jmax + 1, communication_rounds]) * np.nan
 
 ###
@@ -125,59 +137,138 @@ print('\nDevice: %s' %device)
 print("Training starts with algorithm: %s\n" %algorithm.name)
 
 for t in range(communication_rounds):
+    
+    print("This is the {0}-th trial".format(t+1))
 
-    # random client selection
-    control_seed = 0
-    selected_clnts = []
-    while len(selected_clnts) == 0:
-        # Fix randomness in client selection
-        np.random.seed(t + rand_seed + control_seed)
-        act_list    = np.random.uniform(size=n_clients)
-        act_clients = act_list <= act_prob
-        selected_clnts_idx = np.sort(np.where(act_clients)[0])
-        selected_clnts = clients_list[selected_clnts_idx]
-        control_seed += 1
-    
-    print('Selected Clients: %s' %(', '.join(['%2d' %clnt for clnt in selected_clnts_idx])))
-    
-    cloud_model_param_tensor = torch.tensor(cloud_model_param, dtype=torch.float32, device=device)
-    
-    ###
-    # partial training
-    for i, client in enumerate(selected_clnts):
-        # Train locally 
-        print('---- Training client %d' %selected_clnts_idx[i])
-        
-        feddyn_inputs = {
-            "curr_round": t,
-            "cloud_model": cloud_model,
-            "cloud_model_param_tensor": cloud_model_param_tensor,
-            "cloud_model_param": cloud_model_param,
-            "local_param": local_param_list[selected_clnts_idx[i]]
-        }
-        
-        client.local_train(feddyn_inputs)
-        
-        local_param_list[selected_clnts_idx[i]] = feddyn_inputs["local_param"]
-    
-    inputs = {
-        "clients_list": clients_list,
-        "selected_clnts_idx": selected_clnts_idx,
-        "local_param_list": local_param_list,
-        "avg_model": avg_model,
-        "all_model": all_model,
-        "cloud_model": cloud_model,
-        "cloud_model_param": cloud_model_param
-    }
-    
-    server.aggregate(inputs)
-    
-    avg_model = inputs["avg_model"]
-    all_model = inputs["all_model"]
-    cloud_model = inputs["cloud_model"]
-    cloud_model_param = inputs["cloud_model_param"]
+    ref = (1e-10) ** 0.5
+    sigma_n = np.power(10, -SNR / 10)
+    sigma = sigma_n / ref**2# [100,100+range]
 
-    # get the test accuracy
-    algorithm.evaluate(data_obj, cent_x, cent_y, avg_model, all_model, device, tst_perf_sel, trn_perf_sel, tst_perf_all, trn_perf_all, t)
+    # set 2
+    dx2 = (
+        np.random.rand(int(n_clients - np.round(n_clients / 2))) * location_range
+        + 100
+    )
+    print("dx2 = ", dx2)
 
-plot_performance(communication_rounds, tst_perf_sel, algorithm.name, data_obj.name)
+    dx1 = (
+        np.random.rand(int(np.round(n_clients / 2))) * location_range - location_range
+    )  # [-location_range , 0]
+    print("dx1 = ", dx1)
+    dx = np.concatenate((dx1, dx2))
+    dy = np.random.rand(n_clients) * 20 - 10
+    d_UR = (
+        (dx - RIS[0]) ** 2
+        + (dy - RIS[1]) ** 2
+        + RIS[2] ** 2
+    ) ** 0.5
+    d_RB = np.linalg.norm(BS - RIS)
+    d_RIS = d_UR + d_RB
+    d_direct = (
+        (dx - BS[0]) ** 2
+        + (dy - BS[1]) ** 2
+        + BS[2] ** 2
+    ) ** 0.5
+    PL_direct = (
+        BS_Gain
+        * User_Gain
+        * (3 * 10**8 / fc / 4 / np.pi / d_direct) ** alpha_direct
+    )
+    PL_RIS = (
+        BS_Gain
+        * User_Gain
+        * RIS_Gain
+        * n_RIS_ele**2
+        * d_RIS**2
+        / 4
+        / np.pi
+        * (3 * 10**8 / fc / 4 / np.pi / d_UR) ** 2
+        * (3 * 10**8 / fc / 4 / np.pi / d_RB) ** 2
+    )
+    # channels
+    h_d = (
+        np.random.randn(n_receive_antennas, n_clients)
+        + 1j * np.random.randn(n_receive_antennas, n_clients)
+    ) / 2**0.5
+    h_d = h_d @ np.diag(PL_direct**0.5) / ref
+    H_RB = (
+        np.random.randn(n_receive_antennas, n_RIS_ele)
+        + 1j * np.random.randn(n_receive_antennas, n_RIS_ele)
+    ) / 2**0.5
+    h_UR = (
+        np.random.randn(n_RIS_ele, n_clients)
+        + 1j * np.random.randn(n_RIS_ele, n_clients)
+    ) / 2**0.5
+    h_UR = h_UR @ np.diag(PL_RIS**0.5) / ref
+
+    G = np.zeros([n_receive_antennas, n_RIS_ele, n_clients], dtype=complex)
+    for j in range(n_clients):
+        G[:, :, j] = H_RB @ np.diag(h_UR[:, j])
+    x = x0
+
+    start = time.time()
+    print("\nRunning the proposed algorithm")
+    print("initial x = ", x)
+    [x_store, obj_new, f_store, theta_store] = gibbs.optimize(h_d, G, x, sigma)
+    print("final x = ", x_store[Jmax])
+    print("final obj = ", obj_new)
+    end = time.time()
+    print("Running time: {} seconds\n".format(end - start))
+
+    SCA_Gibbs[:, t] = obj_new
+
+    # # random client selection
+    # control_seed = 0
+    # selected_clnts = []
+    # while len(selected_clnts) == 0:
+    #     # Fix randomness in client selection
+    #     np.random.seed(t + rand_seed + control_seed)
+    #     act_list    = np.random.uniform(size=n_clients)
+    #     act_clients = act_list <= act_prob
+    #     selected_clnts_idx = np.sort(np.where(act_clients)[0])
+    #     selected_clnts = clients_list[selected_clnts_idx]
+    #     control_seed += 1
+    
+    # print('Selected Clients: %s' %(', '.join(['%2d' %clnt for clnt in selected_clnts_idx])))
+    
+    # cloud_model_param_tensor = torch.tensor(cloud_model_param, dtype=torch.float32, device=device)
+    
+    # ###
+    # # partial training
+    # for i, client in enumerate(selected_clnts):
+    #     # Train locally 
+    #     print('---- Training client %d' %selected_clnts_idx[i])
+        
+    #     feddyn_inputs = {
+    #         "curr_round": t,
+    #         "cloud_model": cloud_model,
+    #         "cloud_model_param_tensor": cloud_model_param_tensor,
+    #         "cloud_model_param": cloud_model_param,
+    #         "local_param": local_param_list[selected_clnts_idx[i]]
+    #     }
+        
+    #     client.local_train(feddyn_inputs)
+        
+    #     local_param_list[selected_clnts_idx[i]] = feddyn_inputs["local_param"]
+    
+    # inputs = {
+    #     "clients_list": clients_list,
+    #     "selected_clnts_idx": selected_clnts_idx,
+    #     "local_param_list": local_param_list,
+    #     "avg_model": avg_model,
+    #     "all_model": all_model,
+    #     "cloud_model": cloud_model,
+    #     "cloud_model_param": cloud_model_param
+    # }
+    
+    # server.aggregate(inputs)
+    
+    # avg_model = inputs["avg_model"]
+    # all_model = inputs["all_model"]
+    # cloud_model = inputs["cloud_model"]
+    # cloud_model_param = inputs["cloud_model_param"]
+
+    # # get the test accuracy
+    # algorithm.evaluate(data_obj, cent_x, cent_y, avg_model, all_model, device, tst_perf_sel, trn_perf_sel, tst_perf_all, trn_perf_all, t)
+
+# plot_performance(communication_rounds, tst_perf_sel, algorithm.name, data_obj.name)

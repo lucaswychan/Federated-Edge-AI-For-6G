@@ -8,7 +8,6 @@ import argparse
 import torch
 import flow
 
-import MIMO
 from optimize import Gibbs
 
 
