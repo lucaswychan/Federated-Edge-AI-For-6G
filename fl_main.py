@@ -1,24 +1,27 @@
 import copy
 import os
+import time
 
 import numpy as np
 import torch
-import time
 
+from air_comp import AirComp
 from algorithm import FedDyn
 from client import Client
 from dataset import DatasetObject
 from model import Model
+from optimize import *
 from server import Server
 from utils import *
-from optimize import *
+
 # from optlib2 import *
 
-n_clients = 30 # number of clients
+n_clients = 10 # number of clients
 
 # data for train and test
 storage_path = 'LEAF/shakespeare/data/'
-data_obj =  DatasetObject(dataset='CIFAR10', n_client=n_clients, unbalanced_sgm=0, rule='Dirichlet', rule_arg=0.6)
+# data_obj =  DatasetObject(dataset='CIFAR10', n_client=n_clients, unbalanced_sgm=0, rule='Dirichlet', rule_arg=0.6)
+data_obj = DatasetObject(dataset='CIFAR10', n_client=n_clients, rule='iid', unbalanced_sgm=0)
 client_x_all = data_obj.clnt_x
 client_y_all = data_obj.clnt_y
 cent_x = np.concatenate(client_x_all, axis=0)
@@ -57,43 +60,48 @@ n_param              = len(init_par_list)
 alpha_coef           = 1e-2
 max_norm             = 10
 
-algorithm            = FedDyn(act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per, alpha_coef, max_norm)
-
 ###
 # Channel setup
 
-alpha_direct = 3.76  # PL = path loss component
+alpha_direct         = 3.76  # PL = path loss component
 # User-BS Path loss exponent
-fc = 915 * 10**6  # carrier frequency, wavelength lambda=3.0*10**8/fc
-BS_Gain = 10 ** (5.0 / 10)  # BS antenna gain
-RIS_Gain = 10 ** (5.0 / 10)  # RIS antenna gain
-User_Gain = 10 ** (0.0 / 10)  # User antenna gain
-dimen_RIS = 1.0 / 10  # dimension length of RIS element/wavelength
-BS = np.array([-50, 0, 10])
-RIS = np.array([0, 0, 10])
+fc                   = 915 * 10**6  # carrier frequency, wavelength lambda=3.0*10**8/fc
+BS_Gain              = 10 ** (5.0 / 10)  # BS antenna gain
+RIS_Gain             = 10 ** (5.0 / 10)  # RIS antenna gain
+User_Gain            = 10 ** (0.0 / 10)  # User antenna gain
+dimen_RIS            = 1.0 / 10  # dimension length of RIS element/wavelength
+BS                   = np.array([-50, 0, 10])  # Cartesian coordinate of BS
+RIS                  = np.array([0, 0, 10])    # Cartesian coordinate of RIS
+#
+SNR                  = 90.0
+location_range       = 30
+x0                   = np.ones([n_clients], dtype=int)
 
-SNR = 90.0
+# parameters passed to Gibbs
+n_receive_antennas   = 5
+n_RIS_ele            = 40
+Jmax                 = 50
+K                    = np.asarray([len(client_y_all[i]) for i in range(n_clients)])
+RISON                = True
+tau                  = 1.0
+nit                  = 100
+threshold            = 1e-2
+#
+gibbs                = Gibbs(n_clients=n_clients, n_receive_antennas=n_receive_antennas, n_RIS_ele=n_RIS_ele, Jmax=Jmax, K=K, RISON=RISON, tau=tau, nit=nit, threshold=threshold)
 
-location_range = 30
-x0 = np.ones([n_clients], dtype=int)
+#parameters passed to AirComp
+transmit_power       = 0.1
+#
+air_comp             = AirComp(n_receive_antennas=n_receive_antennas, K=weight_list, transmit_power=transmit_power)
 
-n_receive_antennas = 5
-n_RIS_ele = 40
-Jmax = 50
-tau = 1.0
-nit = 100
-threshold = 1e-2
-K = np.asarray([len(client_y_all[i]) for i in range(n_clients)])
-# K =  np.array([1037, 157, 186, 1072, 1767, 150, 1715, 1645, 1847, 196, 1144, 122, 194, 1583, 168, 1508, 109, 1281, 1178, 1276, 101, 161, 163, 187, 1907, 113, 1490, 187, 1925, 107])
-
-gibbs = Gibbs(n_clients=n_clients, n_receive_antennas=n_receive_antennas, n_RIS_ele=n_RIS_ele, Jmax=Jmax, K=K, RISON=True, tau=tau, nit=nit, threshold=threshold)
-print("K = ", K)
-print("shape of K = ", K.shape)
-SCA_Gibbs = np.ones([Jmax + 1, communication_rounds]) * np.nan
 np.random.seed(1)
+noiseless = False
 
 ###
 # FL system components
+
+algorithm            = FedDyn(act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, air_comp, save_period, print_per, alpha_coef, max_norm)
+
 
 clients_list = np.array([Client(algorithm=algorithm,
                                 device=device, 
@@ -137,6 +145,7 @@ else:
     init_model.load_state_dict(torch.load('Output/%s/%s_init_mdl.pt' %(data_obj.name, model_name)))   
 
 ###
+# Start Training
 
 print('\nDevice: %s' %device)
 print("Training starts with algorithm: %s\n" %algorithm.name)
@@ -154,14 +163,10 @@ for t in range(communication_rounds):
         np.random.rand(int(n_clients - np.round(n_clients / 2))) * location_range
         + 200
     )
-    # dx2 = np.array([112.548699, 114.141237, 105.42463, 105.495676, 109.929394, 118.24125, 110.277253, 100.032271, 104.929739, 109.289215, 106.756562, 108.015373, 104.250594, 112.369491, 113.141475])
-    print("dx2 = ", dx2)
 
     dx1 = (
         np.random.rand(int(np.round(n_clients / 2))) * location_range - location_range
     )  # [-location_range , 0]
-    # dx1 = np.array([-18.084911, -3.255654, -9.67265, -16.316275, -9.369625, -2.661465, -9.869951, -12.709738, -8.064077, -14.844869, -8.901576, -17.856489, -4.148711, -3.022698, -9.000826])
-    print("dx1 = ", dx1)
     
     dx = np.concatenate((dx1, dx2))
     np.random.shuffle(dx)
@@ -217,77 +222,69 @@ for t in range(communication_rounds):
     x = x0
 
     start = time.time()
-    print("\nRunning the proposed algorithm")
-    print("initial x = ", x)
+    print("\ninitial x = ", x)
     print()
     [x_store, obj_new, f_store, theta_store] = gibbs.optimize(h_d, G, x, sigma)
     print("final x = ", x_store[Jmax])
-    print("final obj = ", obj_new)
     end = time.time()
     print("Running time: {} seconds\n".format(end - start))
     
     theta_optim = theta_store[:, Jmax]
 
-    h1 = np.zeros([n_receive_antennas, n_clients], dtype=complex)
+    h_optim = np.zeros([n_receive_antennas, n_clients], dtype=complex)
     for i in range(n_clients):
-        h1[:, i] = h_d[:, i] + G[:, :, i] @ theta_optim
+        h_optim[:, i] = h_d[:, i] + G[:, :, i] @ theta_optim
 
     selected_optim = x_store[Jmax]
     selected_clnts_idx = np.where(selected_optim == 1)[0] # get the index of the selected clients
     selected_clnts = clients_list[selected_clnts_idx]
-
-    # # random client selection
-    # control_seed = 0
-    # selected_clnts = []
-    # while len(selected_clnts) == 0:
-    #     # Fix randomness in client selection
-    #     np.random.seed(t + rand_seed + control_seed)
-    #     act_list    = np.random.uniform(size=n_clients)
-    #     act_clients = act_list <= act_prob
-    #     selected_clnts_idx = np.sort(np.where(act_clients)[0])
-    #     selected_clnts = clients_list[selected_clnts_idx]
-    #     control_seed += 1
     
-    # print('Selected Clients: %s' %(', '.join(['%2d' %clnt for clnt in selected_clnts_idx])))
+    print('Selected Clients: %s' %(', '.join(['%2d' %clnt for clnt in selected_clnts_idx])))
     
-    # cloud_model_param_tensor = torch.tensor(cloud_model_param, dtype=torch.float32, device=device)
+    cloud_model_param_tensor = torch.tensor(cloud_model_param, dtype=torch.float32, device=device)
     
-    # ###
-    # # partial training
-    # for i, client in enumerate(selected_clnts):
-    #     # Train locally 
-    #     print('---- Training client %d' %selected_clnts_idx[i])
+    ###
+    # partial training
+    for i, client in enumerate(selected_clnts):
+        # Train locally 
+        print('---- Training client %d' %selected_clnts_idx[i])
         
-    #     feddyn_inputs = {
-    #         "curr_round": t,
-    #         "cloud_model": cloud_model,
-    #         "cloud_model_param_tensor": cloud_model_param_tensor,
-    #         "cloud_model_param": cloud_model_param,
-    #         "local_param": local_param_list[selected_clnts_idx[i]]
-    #     }
+        feddyn_inputs = {
+            "curr_round": t,
+            "cloud_model": cloud_model,
+            "cloud_model_param_tensor": cloud_model_param_tensor,
+            "cloud_model_param": cloud_model_param,
+            "local_param": local_param_list[selected_clnts_idx[i]]
+        }
         
-    #     client.local_train(feddyn_inputs)
+        client.local_train(feddyn_inputs)
         
-    #     local_param_list[selected_clnts_idx[i]] = feddyn_inputs["local_param"]
+        local_param_list[selected_clnts_idx[i]] = feddyn_inputs["local_param"]
     
-    # inputs = {
-    #     "clients_list": clients_list,
-    #     "selected_clnts_idx": selected_clnts_idx,
-    #     "local_param_list": local_param_list,
-    #     "avg_model": avg_model,
-    #     "all_model": all_model,
-    #     "cloud_model": cloud_model,
-    #     "cloud_model_param": cloud_model_param
-    # }
+    inputs = {
+        "clients_list": clients_list,
+        "selected_clnts_idx": selected_clnts_idx,
+        "local_param_list": local_param_list,
+        "avg_model": avg_model,
+        "all_model": all_model,
+        "cloud_model": cloud_model,
+        "cloud_model_param": cloud_model_param,
+        "noiseless": noiseless
+    }
+    if not noiseless:
+        inputs["x"] = selected_optim
+        inputs["f"] = f_store[:, Jmax]
+        inputs["h"] = h_optim
+        inputs["sigma"] = sigma
+        
+    server.aggregate(inputs)
     
-    # server.aggregate(inputs)
-    
-    # avg_model = inputs["avg_model"]
-    # all_model = inputs["all_model"]
-    # cloud_model = inputs["cloud_model"]
-    # cloud_model_param = inputs["cloud_model_param"]
+    avg_model = inputs["avg_model"]
+    all_model = inputs["all_model"]
+    cloud_model = inputs["cloud_model"]
+    cloud_model_param = inputs["cloud_model_param"]
 
-    # # get the test accuracy
-    # algorithm.evaluate(data_obj, cent_x, cent_y, avg_model, all_model, device, tst_perf_sel, trn_perf_sel, tst_perf_all, trn_perf_all, t)
+    # get the test accuracy
+    algorithm.evaluate(data_obj, cent_x, cent_y, avg_model, all_model, device, tst_perf_sel, trn_perf_sel, tst_perf_all, trn_perf_all, t)
 
-# plot_performance(communication_rounds, tst_perf_sel, algorithm.name, data_obj.name)
+plot_performance(communication_rounds, tst_perf_sel, algorithm.name, data_obj.name)

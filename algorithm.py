@@ -10,7 +10,7 @@ from utils import *
 
 
 class Algorithm:
-    def __init__(self, name, act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per):
+    def __init__(self, name, act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, air_comp, save_period, print_per):
         self.name               = name
         self.act_prob           = act_prob
         self.learning_rate      = learning_rate
@@ -22,6 +22,7 @@ class Algorithm:
         self.init_model         = init_model
         self.data_obj           = data_obj
         self.n_param            = n_param
+        self.air_comp           = air_comp
         self.save_period        = save_period
         self.print_per          = print_per
         
@@ -53,8 +54,8 @@ class Algorithm:
 ###
 
 class FedDyn(Algorithm):
-    def __init__(self, act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per, alpha_coef, max_norm):
-        super().__init__("FedDyn", act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per)
+    def __init__(self, act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, air_comp, save_period, print_per, alpha_coef, max_norm):
+        super().__init__("FedDyn", act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, air_comp, save_period, print_per)
         self.alpha_coef = alpha_coef
         self.max_norm   = max_norm
     
@@ -149,8 +150,13 @@ class FedDyn(Algorithm):
     def aggregate(self, inputs: dict):
         clients_list = inputs["clients_list"]
         all_clients_param_list = np.array([client.client_param for client in clients_list])
+        model_param = None
+        if not inputs["noiseless"]:
+            model_param = self.air_comp.transmission(self.n_param, all_clients_param_list[inputs["selected_clnts_idx"]], inputs["x"], inputs["f"], inputs["h"], inputs["sigma"]) / len(inputs["selected_clnts_idx"])
+        else:
+            model_param = all_clients_param_list[inputs["selected_clnts_idx"]]  # from original FedDyn approach
         
-        avg_mdl_param = np.mean(all_clients_param_list[inputs["selected_clnts_idx"]], axis = 0)
+        avg_mdl_param = np.mean(model_param, axis = 0)
         inputs["cloud_model_param"] = avg_mdl_param + np.mean(inputs["local_param_list"], axis=0)
         
         device = clients_list[0].device
