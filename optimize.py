@@ -20,6 +20,8 @@ class Gibbs:
         self.nit = nit
         self.threshold = threshold
         
+        self.verbose = 0
+        
     def optimize(self, h_d, G, x0, sigma):
         N = self.n_receive_antennas
         L = self.n_RIS_ele
@@ -45,10 +47,20 @@ class Gibbs:
         f_store[:, ind] = copy.deepcopy(f)
         beta = min(1, obj_new[ind])
         alpha = 0.9
+        if self.verbose > 1:
+            print("The inital guess: {}, obj={:.6f}".format(x, obj_new[ind]))
+        elif self.verbose == 1:
+            print("The inital guess obj={:.6f}".format(obj_new[ind]))
         f_loop = np.tile(f, (M + 1, 1))
         theta_loop = np.tile(theta, (M + 1, 1))
 
         for j in range(self.Jmax):
+            if self.verbose > 1:
+                print(
+                    "This is the {}-th Gibbs sampling iteration, beta= {:.6f}".format(
+                        j + 1, beta
+                    )
+                )
             
             # store the possible transition solution and their objectives
             X_sample = np.zeros([M + 1, M], dtype=int)
@@ -76,6 +88,8 @@ class Gibbs:
                     theta_loop[m + 1],
                     sigma,
                 )
+                if self.verbose > 1:
+                    print("sol:{} with obj={:.6f}".format(x_sam, Temp[m + 1]))
             temp2 = Temp
 
             Lambda = np.exp(-1 * temp2 / beta)
@@ -84,6 +98,9 @@ class Gibbs:
                 beta = beta / alpha
                 Lambda = np.exp(-1.0 * temp2 / beta)
                 Lambda = Lambda / sum(Lambda)
+            if self.verbose > 1:
+                print("The obj distribution: {}".format(temp2))
+                print("The Lambda distribution: {}".format(Lambda))
                 
             kk_prime = np.random.choice(M + 1, p=Lambda)
             x = copy.deepcopy(X_sample[kk_prime, :])
@@ -94,6 +111,18 @@ class Gibbs:
             x_store[ind, :] = copy.deepcopy(x)
             theta_store[:, ind] = copy.deepcopy(theta)
             f_store[:, ind] = copy.deepcopy(f)
+            
+            if self.verbose > 1:
+                print(
+                    "Choose the solution {}, with objective {:.6f}".format(x, obj_new[ind])
+                )
+
+            if self.verbose:
+                print(
+                    "This is the {}-th Gibbs sampling iteration, beta= {:.6f},obj={:.6f}".format(
+                        j + 1, beta, obj_new[ind]
+                    )
+                )
 
             beta = max(alpha * beta, 1e-4)
 
@@ -191,9 +220,20 @@ class Gibbs:
                 h[:, i] = h_d[:, i] + G[:, :, i] @ theta
             obj = min(np.abs(np.conjugate(f) @ h) ** 2 / K2)   # (24)
             result[it] = copy.deepcopy(obj)
+            if self.verbose > 2:
+                print(
+                    "  Iteration {} Obj {:.6f} Opt Obj {:.6f}".format(
+                        it, result[it], res.fun[0]
+                    )
+                )
 
             if np.abs(obj - obj_pre) / min(1, abs(obj)) <= self.threshold:
                 break
+        
+        if self.verbose == 1:
+            print(
+                " SCA Take {} iterations with final obj {:.6f}".format(it + 1, result[it])
+            )
 
         result = result[0:it]
         return f, theta, result
