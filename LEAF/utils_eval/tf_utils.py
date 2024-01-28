@@ -1,6 +1,7 @@
 
 import tensorflow as tf
 
+
 def __num_elems(shape):
     '''Returns the number of elements in the given shape
 

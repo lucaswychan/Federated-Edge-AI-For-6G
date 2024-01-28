@@ -6,6 +6,7 @@ import json
 import os
 import re
 
+
 def __txt_to_data(txt_dir, seq_length=80):
     """Parses text file in given directory into data for next-character model.
 

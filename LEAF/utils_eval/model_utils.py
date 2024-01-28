@@ -1,7 +1,8 @@
 import json
-import numpy as np
 import os
 from collections import defaultdict
+
+import numpy as np
 
 
 def batch_data(data, batch_size, seed):

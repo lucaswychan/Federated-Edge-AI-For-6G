@@ -1,9 +1,9 @@
 import copy
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from torch.utils import data
-import matplotlib.pyplot as plt
 
 from dataset import Dataset
 

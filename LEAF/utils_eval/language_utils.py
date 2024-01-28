@@ -1,9 +1,9 @@
 """Utils for language models."""
 
-import re
-import numpy as np
 import json
+import re
 
+import numpy as np
 
 # ------------------------
 # utils for shakespeare dataset
