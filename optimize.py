@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 import copy
-import numpy as np
 
-np.set_printoptions(precision=6, threshold=1e3)
+import numpy as np
 from scipy.optimize import minimize
 
 
-class Gibbs:
+class Gibbs(object):
     def __init__(self, n_clients, n_receive_antennas, n_RIS_ele, Jmax, K, RISON, tau, nit, threshold):
         self.n_clients = n_clients
         self.n_receive_antennas = n_receive_antennas
