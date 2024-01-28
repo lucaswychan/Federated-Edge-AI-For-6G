@@ -12,11 +12,13 @@ from model import Model
 from server import Server
 from utils import *
 from optimize import *
+# from optlib2 import *
 
-n_clients = 100 # number of clients
+n_clients = 30 # number of clients
 
 # data for train and test
-data_obj = DatasetObject(dataset='CIFAR10', n_client=n_clients, rule='iid', unbalanced_sgm=0)
+storage_path = 'LEAF/shakespeare/data/'
+data_obj =  DatasetObject(dataset='CIFAR10', n_client=n_clients, unbalanced_sgm=0, rule='Dirichlet', rule_arg=0.6)
 client_x_all = data_obj.clnt_x
 client_y_all = data_obj.clnt_y
 cent_x = np.concatenate(client_x_all, axis=0)
@@ -66,26 +68,29 @@ fc = 915 * 10**6  # carrier frequency, wavelength lambda=3.0*10**8/fc
 BS_Gain = 10 ** (5.0 / 10)  # BS antenna gain
 RIS_Gain = 10 ** (5.0 / 10)  # RIS antenna gain
 User_Gain = 10 ** (0.0 / 10)  # User antenna gain
-d_RIS = 1.0 / 10  # dimension length of RIS element/wavelength
+dimen_RIS = 1.0 / 10  # dimension length of RIS element/wavelength
 BS = np.array([-50, 0, 10])
 RIS = np.array([0, 0, 10])
 
 SNR = 90.0
 
-location_range = 20
+location_range = 30
 x0 = np.ones([n_clients], dtype=int)
 
 n_receive_antennas = 5
 n_RIS_ele = 40
 Jmax = 50
-tau = 1
+tau = 1.0
 nit = 100
 threshold = 1e-2
 K = np.asarray([len(client_y_all[i]) for i in range(n_clients)])
+# K =  np.array([1037, 157, 186, 1072, 1767, 150, 1715, 1645, 1847, 196, 1144, 122, 194, 1583, 168, 1508, 109, 1281, 1178, 1276, 101, 161, 163, 187, 1907, 113, 1490, 187, 1925, 107])
 
 gibbs = Gibbs(n_clients=n_clients, n_receive_antennas=n_receive_antennas, n_RIS_ele=n_RIS_ele, Jmax=Jmax, K=K, RISON=True, tau=tau, nit=nit, threshold=threshold)
 print("K = ", K)
+print("shape of K = ", K.shape)
 SCA_Gibbs = np.ones([Jmax + 1, communication_rounds]) * np.nan
+np.random.seed(1)
 
 ###
 # FL system components
@@ -142,20 +147,25 @@ for t in range(communication_rounds):
 
     ref = (1e-10) ** 0.5
     sigma_n = np.power(10, -SNR / 10)
-    sigma = sigma_n / ref**2# [100,100+range]
+    sigma = sigma_n / ref**2 # [100,100+range]
 
     # set 2
     dx2 = (
         np.random.rand(int(n_clients - np.round(n_clients / 2))) * location_range
-        + 100
+        + 200
     )
+    # dx2 = np.array([112.548699, 114.141237, 105.42463, 105.495676, 109.929394, 118.24125, 110.277253, 100.032271, 104.929739, 109.289215, 106.756562, 108.015373, 104.250594, 112.369491, 113.141475])
     print("dx2 = ", dx2)
 
     dx1 = (
         np.random.rand(int(np.round(n_clients / 2))) * location_range - location_range
     )  # [-location_range , 0]
+    # dx1 = np.array([-18.084911, -3.255654, -9.67265, -16.316275, -9.369625, -2.661465, -9.869951, -12.709738, -8.064077, -14.844869, -8.901576, -17.856489, -4.148711, -3.022698, -9.000826])
     print("dx1 = ", dx1)
+    
     dx = np.concatenate((dx1, dx2))
+    np.random.shuffle(dx)
+    
     dy = np.random.rand(n_clients) * 20 - 10
     d_UR = (
         (dx - RIS[0]) ** 2
@@ -163,7 +173,7 @@ for t in range(communication_rounds):
         + RIS[2] ** 2
     ) ** 0.5
     d_RB = np.linalg.norm(BS - RIS)
-    d_RIS = d_UR + d_RB
+    d_RIS_total = d_UR + d_RB
     d_direct = (
         (dx - BS[0]) ** 2
         + (dy - BS[1]) ** 2
@@ -179,7 +189,7 @@ for t in range(communication_rounds):
         * User_Gain
         * RIS_Gain
         * n_RIS_ele**2
-        * d_RIS**2
+        * dimen_RIS**2
         / 4
         / np.pi
         * (3 * 10**8 / fc / 4 / np.pi / d_UR) ** 2
@@ -209,13 +219,22 @@ for t in range(communication_rounds):
     start = time.time()
     print("\nRunning the proposed algorithm")
     print("initial x = ", x)
+    print()
     [x_store, obj_new, f_store, theta_store] = gibbs.optimize(h_d, G, x, sigma)
     print("final x = ", x_store[Jmax])
     print("final obj = ", obj_new)
     end = time.time()
     print("Running time: {} seconds\n".format(end - start))
+    
+    theta_optim = theta_store[:, Jmax]
 
-    SCA_Gibbs[:, t] = obj_new
+    h1 = np.zeros([n_receive_antennas, n_clients], dtype=complex)
+    for i in range(n_clients):
+        h1[:, i] = h_d[:, i] + G[:, :, i] @ theta_optim
+
+    selected_optim = x_store[Jmax]
+    selected_clnts_idx = np.where(selected_optim == 1)[0] # get the index of the selected clients
+    selected_clnts = clients_list[selected_clnts_idx]
 
     # # random client selection
     # control_seed = 0
