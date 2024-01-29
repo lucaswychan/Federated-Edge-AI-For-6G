@@ -14,9 +14,7 @@ from optimize import *
 from server import Server
 from utils import *
 
-# from optlib2 import *
-
-n_clients = 10 # number of clients
+n_clients = 30 # number of clients
 
 # data for train and test
 storage_path = 'LEAF/shakespeare/data/'
@@ -37,7 +35,7 @@ weight_list = weight_list / np.sum(weight_list) * n_clients
 
 # global parameters
 model_name           = 'cifar10' # Model type
-communication_rounds = 10
+communication_rounds = 50
 rand_seed            = 0
 device               = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -87,7 +85,7 @@ tau                  = 1.0
 nit                  = 100
 threshold            = 1e-2
 #
-gibbs                = Gibbs(n_clients=n_clients, n_receive_antennas=n_receive_antennas, n_RIS_ele=n_RIS_ele, Jmax=Jmax, K=K, RISON=RISON, tau=tau, nit=nit, threshold=threshold)
+gibbs                = Gibbs(n_clients=n_clients, n_receive_antennas=n_receive_antennas, n_RIS_ele=n_RIS_ele, Jmax=Jmax, K=weight_list, RISON=RISON, tau=tau, nit=nit, threshold=threshold)
 
 #parameters passed to AirComp
 transmit_power       = 0.1
@@ -95,7 +93,7 @@ transmit_power       = 0.1
 air_comp             = AirComp(n_receive_antennas=n_receive_antennas, K=weight_list, transmit_power=transmit_power)
 
 np.random.seed(1)
-noiseless = False
+noiseless = True
 
 ###
 # FL system components
@@ -226,6 +224,7 @@ for t in range(communication_rounds):
     print()
     [x_store, obj_new, f_store, theta_store] = gibbs.optimize(h_d, G, x, sigma)
     print("final x = ", x_store[Jmax])
+    print("final obj = ", obj_new)
     end = time.time()
     print("Running time: {} seconds\n".format(end - start))
     

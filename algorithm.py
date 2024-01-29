@@ -150,13 +150,16 @@ class FedDyn(Algorithm):
     def aggregate(self, inputs: dict):
         clients_list = inputs["clients_list"]
         all_clients_param_list = np.array([client.client_param for client in clients_list])
-        model_param = None
+        avg_mdl_param = None
         if not inputs["noiseless"]:
-            model_param = self.air_comp.transmission(self.n_param, all_clients_param_list[inputs["selected_clnts_idx"]], inputs["x"], inputs["f"], inputs["h"], inputs["sigma"]) / len(inputs["selected_clnts_idx"])
+            print("\nStart AirComp Transmission")
+            avg_mdl_param = self.air_comp.transmission(self.n_param, all_clients_param_list[inputs["selected_clnts_idx"]], inputs["x"], inputs["f"], inputs["h"], inputs["sigma"])
         else:
-            model_param = all_clients_param_list[inputs["selected_clnts_idx"]]  # from original FedDyn approach
+            avg_mdl_param = np.mean(all_clients_param_list[inputs["selected_clnts_idx"]], axis=0)  # from original FedDyn approach
         
-        avg_mdl_param = np.mean(model_param, axis = 0)
+        # print("n_param = ", self.n_param)
+        # print("avg_mdl_param.shape = ", avg_mdl_param.shape)
+        
         inputs["cloud_model_param"] = avg_mdl_param + np.mean(inputs["local_param_list"], axis=0)
         
         device = clients_list[0].device
@@ -173,6 +176,9 @@ class FedAvg(Algorithm):
     
     # override
     def local_train(self, client: Client, inputs: dict):
+        pass
+    
+    def _train_model(self):
         pass
     
     # override
