@@ -92,8 +92,8 @@ transmit_power       = 0.1
 #
 air_comp             = AirComp(n_receive_antennas=n_receive_antennas, K=weight_list, transmit_power=transmit_power)
 
-np.random.seed(1)
-noiseless = True
+np.random.seed(2)
+noiseless = False
 
 ###
 # FL system components
@@ -147,6 +147,7 @@ else:
 
 print('\nDevice: %s' %device)
 print("Training starts with algorithm: %s\n" %algorithm.name)
+print("The system is {}".format("noiseless" if noiseless else "noisy"))
 
 for t in range(communication_rounds):
     
@@ -286,4 +287,4 @@ for t in range(communication_rounds):
     # get the test accuracy
     algorithm.evaluate(data_obj, cent_x, cent_y, avg_model, all_model, device, tst_perf_sel, trn_perf_sel, tst_perf_all, trn_perf_all, t)
 
-plot_performance(communication_rounds, tst_perf_sel, algorithm.name, data_obj.name)
+plot_performance(communication_rounds, tst_perf_sel, algorithm.name, data_obj.name, n_clients, noiseless)

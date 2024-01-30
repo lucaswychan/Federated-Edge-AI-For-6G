@@ -152,8 +152,9 @@ class FedDyn(Algorithm):
         all_clients_param_list = np.array([client.client_param for client in clients_list])
         avg_mdl_param = None
         if not inputs["noiseless"]:
-            print("\nStart AirComp Transmission")
+            print("\nStart AirComp Transmission") 
             avg_mdl_param = self.air_comp.transmission(self.n_param, all_clients_param_list[inputs["selected_clnts_idx"]], inputs["x"], inputs["f"], inputs["h"], inputs["sigma"])
+            inputs["local_param_list"] = self.air_comp.transmission(self.n_param, inputs["local_param_list"], inputs["x"], inputs["f"], inputs["h"], inputs["sigma"])
         else:
             avg_mdl_param = np.mean(all_clients_param_list[inputs["selected_clnts_idx"]], axis=0)  # from original FedDyn approach
         
