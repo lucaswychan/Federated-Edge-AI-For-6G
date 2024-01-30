@@ -72,7 +72,7 @@ def get_acc_loss(data_x, data_y, model, dataset_name, device, w_decay = None):
     return loss_overall, acc_overall / n_tst
 
 
-def plot_performance(communication_rounds, tst_perf_all, algorithm_name, data_obj_name, n_clients, noiseless):
+def save_performance(communication_rounds, tst_perf_all, algorithm_name, data_obj_name, n_clients, noiseless):
     plt.figure(figsize=(6, 5))
     plt.plot(np.arange(communication_rounds)+1, tst_perf_all[:,1], label=algorithm_name, linewidth=2.5, color='red')
     plt.ylabel('Test Accuracy', fontsize=16)
@@ -84,3 +84,4 @@ def plot_performance(communication_rounds, tst_perf_all, algorithm_name, data_ob
     plt.xticks(fontsize=16)
     plt.yticks(fontsize=16)
     plt.savefig('Output/{}/{}_{}cln_{}comm_{}.pdf'.format(data_obj_name, algorithm_name,  n_clients, communication_rounds, "noiseless" if noiseless else "noisy"), dpi=1000, bbox_inches='tight')
+    np.save('Output/{}/{}_{}cln_{}comm_{}_tst_perf_all.npy'.format(data_obj_name, algorithm_name,  n_clients, communication_rounds, "noiseless" if noiseless else "noisy"), tst_perf_all)
