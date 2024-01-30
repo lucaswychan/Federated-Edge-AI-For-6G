@@ -41,7 +41,7 @@ device               = torch.device("cuda:0" if torch.cuda.is_available() else "
 
 # algorithm parameters
 act_prob             = 0.6
-learning_rate        = 0.1
+learning_rate        = 0.05
 lr_decay_per_round   = 1
 batch_size           = 50
 epoch                = 5
@@ -287,4 +287,4 @@ for t in range(communication_rounds):
     # get the test accuracy
     algorithm.evaluate(data_obj, cent_x, cent_y, avg_model, all_model, device, tst_perf_sel, trn_perf_sel, tst_perf_all, trn_perf_all, t)
 
-plot_performance(communication_rounds, tst_perf_sel, algorithm.name, data_obj.name, n_clients, noiseless)
+save_performance(communication_rounds, tst_perf_all, algorithm.name, data_obj.name, n_clients, noiseless)
