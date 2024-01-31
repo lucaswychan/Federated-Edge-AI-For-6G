@@ -10,10 +10,10 @@ from utils import *
 
 
 class Algorithm:
-    def __init__(self, name, act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, air_comp, save_period, print_per):
+    def __init__(self, name, act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, air_comp, save_period, print_per):
         self.name               = name
         self.act_prob           = act_prob
-        self.learning_rate      = learning_rate
+        self.lr      = lr
         self.lr_decay_per_round = lr_decay_per_round
         self.batch_size         = batch_size
         self.epoch              = epoch
@@ -54,8 +54,8 @@ class Algorithm:
 ###
 
 class FedDyn(Algorithm):
-    def __init__(self, act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, air_comp, save_period, print_per, alpha_coef, max_norm):
-        super().__init__("FedDyn", act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, air_comp, save_period, print_per)
+    def __init__(self, act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, air_comp, save_period, print_per, alpha_coef, max_norm):
+        super().__init__("FedDyn", act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, air_comp, save_period, print_per)
         self.alpha_coef = alpha_coef
         self.max_norm   = max_norm
     
@@ -87,14 +87,14 @@ class FedDyn(Algorithm):
     
     
     def _train_model(self, model, alpha_coef_adpt, avg_mdl_param, local_grad_vector, trn_x, trn_y, curr_round):
-        decayed_learning_rate = self.learning_rate * (self.lr_decay_per_round ** curr_round)
+        decayed_lr = self.lr * (self.lr_decay_per_round ** curr_round)
         dataset_name = self.data_obj.dataset
         
         n_trn = trn_x.shape[0]
         trn_gen = data.DataLoader(Dataset(trn_x, trn_y, train=True, dataset_name=dataset_name), batch_size=self.batch_size, shuffle=True)
         loss_fn = torch.nn.CrossEntropyLoss(reduction="sum")
         
-        optimizer = torch.optim.SGD(model.parameters(), lr=decayed_learning_rate, weight_decay=alpha_coef_adpt+self.weight_decay)
+        optimizer = torch.optim.SGD(model.parameters(), lr=decayed_lr, weight_decay=alpha_coef_adpt+self.weight_decay)
         model.train(); model = model.to(self.device)
         
         for e in range(self.epoch):
@@ -171,8 +171,8 @@ class FedDyn(Algorithm):
 ###
 
 class FedAvg(Algorithm):
-    def __init__(self, act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per):
-        super().__init__("FedAvg", act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per)
+    def __init__(self, act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per):
+        super().__init__("FedAvg", act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per)
     
     # override
     def local_train(self, client: Client, inputs: dict):
@@ -188,8 +188,8 @@ class FedAvg(Algorithm):
 ###
 
 class FedProx(Algorithm):
-    def __init__(self, act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per):
-        super().__init__("FedProx", act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per)
+    def __init__(self, act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per):
+        super().__init__("FedProx", act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per)
     
     # override
     def local_train(self, client: Client, inputs: dict):

@@ -6,9 +6,9 @@ from scipy.optimize import minimize
 
 
 class Gibbs(object):
-    def __init__(self, n_clients, n_receive_antennas, n_RIS_ele, Jmax, K, RISON, tau, nit, threshold):
+    def __init__(self, n_clients, n_receive_ant, n_RIS_ele, Jmax, K, RISON, tau, nit, threshold):
         self.n_clients = n_clients
-        self.n_receive_antennas = n_receive_antennas
+        self.n_receive_ant = n_receive_ant
         self.n_RIS_ele = n_RIS_ele
         self.Jmax = Jmax
         self.K = K
@@ -22,7 +22,7 @@ class Gibbs(object):
         self.verbose = 0
         
     def optimize(self, h_d, G, x0, sigma):
-        N = self.n_receive_antennas
+        N = self.n_receive_ant
         L = self.n_RIS_ele
         M = self.n_clients
         
@@ -128,7 +128,7 @@ class Gibbs(object):
         return x_store, obj_new, f_store, theta_store
     
     def find_obj_inner(self, x, K, K2, Ksum2, h_d, G, f0, theta0, sigma):
-        N = self.n_receive_antennas
+        N = self.n_receive_ant
         L = self.n_RIS_ele
         M = self.n_clients
         
@@ -158,7 +158,7 @@ class Gibbs(object):
     
     # Algorithm 1
     def sca_fmincon(self, h_d, G, f, theta, x, K2):   # (25)
-        N = self.n_receive_antennas
+        N = self.n_receive_ant
         L = self.n_RIS_ele
         I = sum(x)
         

@@ -4,14 +4,14 @@ import numpy as np
 
 
 class AirComp(object):
-    def __init__(self, n_receive_antennas, K, transmit_power):
-        self.n_receive_antennas = n_receive_antennas
+    def __init__(self, n_receive_ant, K, transmit_power):
+        self.n_receive_ant = n_receive_ant
         self.K = K
         self.transmit_power = transmit_power
 
     def transmission(self, d, signal, x, f, h, sigma):
         index = x == 1
-        N = self.n_receive_antennas
+        N = self.n_receive_ant
         K = self.K[index]  # K_m
         K2 = K**2   # K_m^2
 

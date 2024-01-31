@@ -6,9 +6,11 @@ def args_parser():
     # FedDyn setup
     parser.add_argument('--n_clients', type=int, default=30, help="number of clients")
     
-    parser.add_argument('--act_prob', type=float, default=0.6, help="probability of active clients")
+    parser.add_argument('--comm_rounds', type=int, default=50, help="number of communication rounds")
     
     parser.add_argument('--lr', type=float, default=0.05, help="learning rate")
+    
+    parser.add_argument('--act_prob', type=float, default=0.6, help="probability of active clients")
     
     parser.add_argument('--lr_decay_per_round', type=float, default=1, help="learning rate decay per round")
     
@@ -20,8 +22,6 @@ def args_parser():
     
     parser.add_argument('--model_name', type=str, default='cifar10', help="model name")
     
-    parser.add_argument('--communication_rounds', type=int, default=50, help="number of communication rounds")
-    
     parser.add_argument('--rand_seed', type=int, default=1, help="random seed")
     
     parser.add_argument('--save_period', type=int, default=1, help="save period")
@@ -30,15 +30,15 @@ def args_parser():
     
     
     # RIS FL setup
+    parser.add_argument('--n_RIS_ele', type=int, default=40, help="number of RIS elements")
+    
+    parser.add_argument('--n_receive_ant', type=int, default=5, help="number of receive antennas")
+    
     parser.add_argument('--alpha_direct', type=float, default=3.76, help="path loss component")
     
     parser.add_argument('--SNR', type=float, default=90.0, help="noise variance/0.1W in dB")
     
     parser.add_argument('--location_range', type=int, default=30, help="location range between clients and RIS")
-    
-    parser.add_argument('--n_receive_antennas', type=int, default=5, help="number of receive antennas")
-    
-    parser.add_argument('--n_RIS_ele', type=int, default=40, help="number of RIS elements")
     
     parser.add_argument('--Jmax', type=int, default=50, help="number of maximum Gibbs Outer loops")
     

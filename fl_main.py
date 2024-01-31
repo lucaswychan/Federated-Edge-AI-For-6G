@@ -35,48 +35,47 @@ weight_list = np.asarray([len(client_y_all[i]) for i in range(args.n_clients)])
 weight_list = weight_list / np.sum(weight_list) * args.n_clients
 
 # global parameters
-device               = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device        = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # algorithm parameters
-model_func           = lambda : Model(args.model_name)
-init_model           = model_func()
+model_func    = lambda : Model(args.model_name)
+init_model    = model_func()
 
-init_par_list        = get_model_params([init_model])[0] # parameters of the iargs.nitial model
-n_param              = len(init_par_list)
+init_par_list = get_model_params([init_model])[0] # parameters of the iargs.nitial model
+n_param       = len(init_par_list)
 
 # FedDyn parameters
-alpha_coef           = 1e-2
-max_norm             = 10
+alpha_coef    = 1e-2
+max_norm      = 10
 
 ###
 # Channel setup
 
 # User-BS Path loss exponent
-fc                   = 915 * 10**6  # carrier frequency, wavelength lambda=3.0*10**8/fc
-BS_Gain              = 10 ** (5.0 / 10)  # BS antenna gain
-RIS_Gain             = 10 ** (5.0 / 10)  # RIS antenna gain
-User_Gain            = 10 ** (0.0 / 10)  # User antenna gain
-dimen_RIS            = 1.0 / 10  # dimension length of RIS element/wavelength
-BS                   = np.array([-50, 0, 10])  # Cartesian coordinate of BS
-RIS                  = np.array([0, 0, 10])    # Cartesian coordinate of RIS
+fc            = 915 * 10**6  # carrier frequency, wavelength lambda=3.0*10**8/fc
+BS_Gain       = 10 ** (5.0 / 10)  # BS antenna gain
+RIS_Gain      = 10 ** (5.0 / 10)  # RIS antenna gain
+User_Gain     = 10 ** (0.0 / 10)  # User antenna gain
+dimen_RIS     = 1.0 / 10  # dimension length of RIS element/wavelength
+BS            = np.array([-50, 0, 10])  # Cartesian coordinate of BS
+RIS           = np.array([0, 0, 10])    # Cartesian coordinate of RIS
 #
-x0                   = np.ones([args.n_clients], dtype=int)
+x0            = np.ones([args.n_clients], dtype=int)
 
 # parameters passed to Gibbs
-K                    = np.asarray([len(client_y_all[i]) for i in range(args.n_clients)])
+K             = np.asarray([len(client_y_all[i]) for i in range(args.n_clients)])
 #
-gibbs                = Gibbs(n_clients=args.n_clients, n_receive_antennas=args.n_receive_antennas, n_RIS_ele=args.n_RIS_ele, Jmax=args.Jmax, K=weight_list, RISON=args.RISON, tau=args.tau, nit=args.nit, threshold=args.threshold)
+gibbs         = Gibbs(n_clients=args.n_clients, n_receive_ant=args.n_receive_ant, n_RIS_ele=args.n_RIS_ele, Jmax=args.Jmax, K=weight_list, RISON=args.RISON, tau=args.tau, nit=args.nit, threshold=args.threshold)
 
 #
-air_comp             = AirComp(n_receive_antennas=args.n_receive_antennas, K=weight_list, transmit_power=args.transmit_power)
+air_comp      = AirComp(n_receive_ant=args.n_receive_ant, K=weight_list, transmit_power=args.transmit_power)
 
 np.random.seed(args.rand_seed)
 
 ###
 # FL system components
 
-algorithm            = FedDyn(args.act_prob, args.learning_rate, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, air_comp, args.save_period, args.print_per, alpha_coef, max_norm)
-
+algorithm = FedDyn(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, air_comp, args.save_period, args.print_per, alpha_coef, max_norm)
 
 clients_list = np.array([Client(algorithm=algorithm,
                                 device=device, 
@@ -91,10 +90,10 @@ server = Server(algorithm=algorithm)
 
 ###
 
-local_param_list = np.zeros((args.n_clients, n_param)).astype('float32')
+local_param_list = np.zeros((args.n_clients, n_param)).astype('float32')  # for feddyn
 
-trn_perf_sel = np.zeros((args.communication_rounds, 2)); trn_perf_all = np.zeros((args.communication_rounds, 2))
-tst_perf_sel = np.zeros((args.communication_rounds, 2)); tst_perf_all = np.zeros((args.communication_rounds, 2))
+trn_perf_sel = np.zeros((args.comm_rounds, 2)); trn_perf_all = np.zeros((args.comm_rounds, 2))
+tst_perf_sel = np.zeros((args.comm_rounds, 2)); tst_perf_all = np.zeros((args.comm_rounds, 2))
 
 # average model
 avg_model = model_func().to(device)
@@ -111,22 +110,22 @@ cloud_model_param = get_model_params([cloud_model], n_param)[0]
 
 ###
 
-if not os.path.exists('Output/%s/%s_iargs.nit_mdl.pt' %(data_obj.name, args.model_name)):
+if not os.path.exists('Output/%s/%s_init_mdl.pt' %(data_obj.name, args.model_name)):
     print("New directory!")
     os.mkdir('Output/%s/' %(data_obj.name))
-    torch.save(init_model.state_dict(), 'Output/%s/%s_iargs.nit_mdl.pt' %(data_obj.name, args.model_name))
+    torch.save(init_model.state_dict(), 'Output/%s/%s_init_mdl.pt' %(data_obj.name, args.model_name))
 else:
     # Load model
-    init_model.load_state_dict(torch.load('Output/%s/%s_iargs.nit_mdl.pt' %(data_obj.name, args.model_name)))   
+    init_model.load_state_dict(torch.load('Output/%s/%s_init_mdl.pt' %(data_obj.name, args.model_name)))   
 
 ###
 # Start Training
 
 print('\nDevice: %s' %device)
 print("Training starts with algorithm: %s\n" %algorithm.name)
-print("The system is {}".format("args.noiseless" if args.noiseless else "noisy"))
+print("The system is {}".format("noiseless" if args.noiseless else "noisy"))
 
-for t in range(args.communication_rounds):
+for t in range(args.comm_rounds):
     
     print("This is the {0}-th trial".format(t+1))
 
@@ -178,13 +177,13 @@ for t in range(args.communication_rounds):
     )
     # channels
     h_d = (
-        np.random.randn(args.n_receive_antennas, args.n_clients)
-        + 1j * np.random.randn(args.n_receive_antennas, args.n_clients)
+        np.random.randn(args.n_receive_ant, args.n_clients)
+        + 1j * np.random.randn(args.n_receive_ant, args.n_clients)
     ) / 2**0.5
     h_d = h_d @ np.diag(PL_direct**0.5) / ref
     H_RB = (
-        np.random.randn(args.n_receive_antennas, args.n_RIS_ele)
-        + 1j * np.random.randn(args.n_receive_antennas, args.n_RIS_ele)
+        np.random.randn(args.n_receive_ant, args.n_RIS_ele)
+        + 1j * np.random.randn(args.n_receive_ant, args.n_RIS_ele)
     ) / 2**0.5
     h_UR = (
         np.random.randn(args.n_RIS_ele, args.n_clients)
@@ -192,7 +191,7 @@ for t in range(args.communication_rounds):
     ) / 2**0.5
     h_UR = h_UR @ np.diag(PL_RIS**0.5) / ref
 
-    G = np.zeros([args.n_receive_antennas, args.n_RIS_ele, args.n_clients], dtype=complex)
+    G = np.zeros([args.n_receive_ant, args.n_RIS_ele, args.n_clients], dtype=complex)
     for j in range(args.n_clients):
         G[:, :, j] = H_RB @ np.diag(h_UR[:, j])
     x = x0
@@ -208,7 +207,7 @@ for t in range(args.communication_rounds):
     
     theta_optim = theta_store[:, args.Jmax]
 
-    h_optim = np.zeros([args.n_receive_antennas, args.n_clients], dtype=complex)
+    h_optim = np.zeros([args.n_receive_ant, args.n_clients], dtype=complex)
     for i in range(args.n_clients):
         h_optim[:, i] = h_d[:, i] + G[:, :, i] @ theta_optim
 
@@ -246,7 +245,7 @@ for t in range(args.communication_rounds):
         "all_model": all_model,
         "cloud_model": cloud_model,
         "cloud_model_param": cloud_model_param,
-        "args.noiseless": args.noiseless
+        "noiseless": args.noiseless
     }
     if not args.noiseless:
         inputs["x"] = selected_optim
@@ -264,4 +263,4 @@ for t in range(args.communication_rounds):
     # get the test accuracy
     algorithm.evaluate(data_obj, cent_x, cent_y, avg_model, all_model, device, tst_perf_sel, trn_perf_sel, tst_perf_all, trn_perf_all, t)
 
-save_performance(args.communication_rounds, tst_perf_all, algorithm.name, data_obj.name, args.n_clients, args.noiseless)
+save_performance(args.comm_rounds, tst_perf_all, algorithm.name, data_obj.name, args.n_clients, args.noiseless)
