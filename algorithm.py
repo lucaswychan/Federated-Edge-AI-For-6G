@@ -13,7 +13,7 @@ class Algorithm:
     def __init__(self, name, act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, air_comp, save_period, print_per):
         self.name               = name
         self.act_prob           = act_prob
-        self.lr      = lr
+        self.lr                 = lr
         self.lr_decay_per_round = lr_decay_per_round
         self.batch_size         = batch_size
         self.epoch              = epoch
