@@ -6,7 +6,7 @@ import numpy as np
 import torch
 
 from air_comp import AirComp
-from algorithm import FedDyn, FedAvg, FedProx
+from algorithm import FedAvg, FedDyn, FedProx
 from args import args_parser
 from client import Client
 from dataset import DatasetObject
@@ -15,6 +15,7 @@ from optimize import *
 from server import Server
 from utils import *
 
+# get all the constant parameters
 args = args_parser()
 
 # data for train and test
@@ -31,8 +32,8 @@ dataset      = data_obj.dataset
 
 # the weight corresponds to the number of data that the client i has
 # the more data the client has, the larger the weight is
-weight_list = np.asarray([len(client_y_all[i]) for i in range(args.n_clients)])
-weight_list = weight_list / np.sum(weight_list) * args.n_clients
+weight_list   = np.asarray([len(client_y_all[i]) for i in range(args.n_clients)])
+weight_list   = weight_list / np.sum(weight_list) * args.n_clients
 
 # global parameters
 device        = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -87,8 +88,18 @@ clients_list = np.array([Client(algorithm=algorithm,
                             ) for i in range(args.n_clients)])
 
 server = Server(algorithm=algorithm)
+###
+
+if not os.path.exists('Output/%s/%s_init_mdl.pt' %(data_obj.name, args.model_name)):
+    print("New directory!")
+    os.mkdir('Output/%s/' %(data_obj.name))
+    torch.save(init_model.state_dict(), 'Output/%s/%s_init_mdl.pt' %(data_obj.name, args.model_name))
+else:
+    # Load model
+    init_model.load_state_dict(torch.load('Output/%s/%s_init_mdl.pt' %(data_obj.name, args.model_name)))   
 
 ###
+# Model Initialization (feel free to add new parameters in this section if using this frameworks)
 
 local_param_list = np.zeros((args.n_clients, n_param)).astype('float32')  # for feddyn
 
@@ -103,20 +114,10 @@ avg_model.load_state_dict(copy.deepcopy(dict(init_model.named_parameters())))
 all_model = model_func().to(device)
 all_model.load_state_dict(copy.deepcopy(dict(init_model.named_parameters())))
 
-# cloud (server) model
+# cloud (server) model  (for feddyn)
 cloud_model = model_func().to(device)
 cloud_model.load_state_dict(copy.deepcopy(dict(init_model.named_parameters())))
 cloud_model_param = get_model_params([cloud_model], n_param)[0]
-
-###
-
-if not os.path.exists('Output/%s/%s_init_mdl.pt' %(data_obj.name, args.model_name)):
-    print("New directory!")
-    os.mkdir('Output/%s/' %(data_obj.name))
-    torch.save(init_model.state_dict(), 'Output/%s/%s_init_mdl.pt' %(data_obj.name, args.model_name))
-else:
-    # Load model
-    init_model.load_state_dict(torch.load('Output/%s/%s_init_mdl.pt' %(data_obj.name, args.model_name)))   
 
 ###
 # Start Training
@@ -197,13 +198,9 @@ for t in range(args.comm_rounds):
     x = x0
 
     start = time.time()
-    print("\niargs.nitial x = ", x)
-    print()
     [x_store, obj_new, f_store, theta_store] = gibbs.optimize(h_d, G, x, sigma)
-    print("final x = ", x_store[args.Jmax])
-    print("final obj = ", obj_new)
     end = time.time()
-    print("Running time: {} seconds\n".format(end - start))
+    print("Running time of Gibbs Optimization: {} seconds\n".format(end - start))
     
     theta_optim = theta_store[:, args.Jmax]
 
@@ -215,6 +212,7 @@ for t in range(args.comm_rounds):
     selected_clnts_idx = np.where(selected_optim == 1)[0] # get the index of the selected clients
     selected_clnts = clients_list[selected_clnts_idx]
     
+    print("Selected Clients Index: {}".format(x_store[args.Jmax]))
     print('Selected Clients: %s' %(', '.join(['%2d' %clnt for clnt in selected_clnts_idx])))
     
     cloud_model_param_tensor = torch.tensor(cloud_model_param, dtype=torch.float32, device=device)
@@ -235,6 +233,7 @@ for t in range(args.comm_rounds):
         
         client.local_train(feddyn_inputs)
         
+        # update the parameters
         local_param_list[selected_clnts_idx[i]] = feddyn_inputs["local_param"]
     
     inputs = {
@@ -247,6 +246,7 @@ for t in range(args.comm_rounds):
         "cloud_model_param": cloud_model_param,
         "noiseless": args.noiseless
     }
+    # pass the AirComp optimization parameters
     if not args.noiseless:
         inputs["x"] = selected_optim
         inputs["f"] = f_store[:, args.Jmax]
@@ -255,6 +255,7 @@ for t in range(args.comm_rounds):
         
     server.aggregate(inputs)
     
+    # update the parameters after aggregation
     avg_model = inputs["avg_model"]
     all_model = inputs["all_model"]
     cloud_model = inputs["cloud_model"]
