@@ -6,7 +6,8 @@ import numpy as np
 import torch
 
 from air_comp import AirComp
-from algorithm import FedDyn
+from algorithm import FedDyn, FedAvg, FedProx
+from args import args_parser
 from client import Client
 from dataset import DatasetObject
 from model import Model
@@ -14,12 +15,12 @@ from optimize import *
 from server import Server
 from utils import *
 
-n_clients = 30 # number of clients
+args = args_parser()
 
 # data for train and test
 storage_path = 'LEAF/shakespeare/data/'
-# data_obj =  DatasetObject(dataset='CIFAR10', n_client=n_clients, unbalanced_sgm=0, rule='Dirichlet', rule_arg=0.6)
-data_obj = DatasetObject(dataset='CIFAR10', n_client=n_clients, rule='iid', unbalanced_sgm=0)
+# data_obj =  DatasetObject(dataset='CIFAR10', n_client=args.n_clients, unbalanced_sgm=0, rule='Dirichlet', rule_arg=0.6)
+data_obj = DatasetObject(dataset='CIFAR10', n_client=args.n_clients, rule='iid', unbalanced_sgm=0)
 client_x_all = data_obj.clnt_x
 client_y_all = data_obj.clnt_y
 cent_x = np.concatenate(client_x_all, axis=0)
@@ -30,28 +31,17 @@ dataset      = data_obj.dataset
 
 # the weight corresponds to the number of data that the client i has
 # the more data the client has, the larger the weight is
-weight_list = np.asarray([len(client_y_all[i]) for i in range(n_clients)])
-weight_list = weight_list / np.sum(weight_list) * n_clients
+weight_list = np.asarray([len(client_y_all[i]) for i in range(args.n_clients)])
+weight_list = weight_list / np.sum(weight_list) * args.n_clients
 
 # global parameters
-model_name           = 'cifar10' # Model type
-communication_rounds = 50
-rand_seed            = 0
 device               = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # algorithm parameters
-act_prob             = 0.6
-learning_rate        = 0.05
-lr_decay_per_round   = 1
-batch_size           = 50
-epoch                = 5
-weight_decay         = 1e-3
-model_func           = lambda : Model(model_name)
+model_func           = lambda : Model(args.model_name)
 init_model           = model_func()
-save_period          = 1
-print_per            = 5
 
-init_par_list        = get_model_params([init_model])[0] # parameters of the initial model
+init_par_list        = get_model_params([init_model])[0] # parameters of the iargs.nitial model
 n_param              = len(init_par_list)
 
 # FedDyn parameters
@@ -61,7 +51,6 @@ max_norm             = 10
 ###
 # Channel setup
 
-alpha_direct         = 3.76  # PL = path loss component
 # User-BS Path loss exponent
 fc                   = 915 * 10**6  # carrier frequency, wavelength lambda=3.0*10**8/fc
 BS_Gain              = 10 ** (5.0 / 10)  # BS antenna gain
@@ -71,34 +60,22 @@ dimen_RIS            = 1.0 / 10  # dimension length of RIS element/wavelength
 BS                   = np.array([-50, 0, 10])  # Cartesian coordinate of BS
 RIS                  = np.array([0, 0, 10])    # Cartesian coordinate of RIS
 #
-SNR                  = 90.0
-location_range       = 30
-x0                   = np.ones([n_clients], dtype=int)
+x0                   = np.ones([args.n_clients], dtype=int)
 
 # parameters passed to Gibbs
-n_receive_antennas   = 5
-n_RIS_ele            = 40
-Jmax                 = 50
-K                    = np.asarray([len(client_y_all[i]) for i in range(n_clients)])
-RISON                = True
-tau                  = 1.0
-nit                  = 100
-threshold            = 1e-2
+K                    = np.asarray([len(client_y_all[i]) for i in range(args.n_clients)])
 #
-gibbs                = Gibbs(n_clients=n_clients, n_receive_antennas=n_receive_antennas, n_RIS_ele=n_RIS_ele, Jmax=Jmax, K=weight_list, RISON=RISON, tau=tau, nit=nit, threshold=threshold)
+gibbs                = Gibbs(n_clients=args.n_clients, n_receive_antennas=args.n_receive_antennas, n_RIS_ele=args.n_RIS_ele, Jmax=args.Jmax, K=weight_list, RISON=args.RISON, tau=args.tau, nit=args.nit, threshold=args.threshold)
 
-#parameters passed to AirComp
-transmit_power       = 0.1
 #
-air_comp             = AirComp(n_receive_antennas=n_receive_antennas, K=weight_list, transmit_power=transmit_power)
+air_comp             = AirComp(n_receive_antennas=args.n_receive_antennas, K=weight_list, transmit_power=args.transmit_power)
 
-np.random.seed(2)
-noiseless = False
+np.random.seed(args.rand_seed)
 
 ###
 # FL system components
 
-algorithm            = FedDyn(act_prob, learning_rate, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, air_comp, save_period, print_per, alpha_coef, max_norm)
+algorithm            = FedDyn(args.act_prob, args.learning_rate, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, air_comp, args.save_period, args.print_per, alpha_coef, max_norm)
 
 
 clients_list = np.array([Client(algorithm=algorithm,
@@ -108,16 +85,16 @@ clients_list = np.array([Client(algorithm=algorithm,
                                 train_data_Y=client_y_all[i], 
                                 model=init_model, 
                                 client_param=np.copy(init_par_list)
-                            ) for i in range(n_clients)])
+                            ) for i in range(args.n_clients)])
 
 server = Server(algorithm=algorithm)
 
 ###
 
-local_param_list = np.zeros((n_clients, n_param)).astype('float32')
+local_param_list = np.zeros((args.n_clients, n_param)).astype('float32')
 
-trn_perf_sel = np.zeros((communication_rounds, 2)); trn_perf_all = np.zeros((communication_rounds, 2))
-tst_perf_sel = np.zeros((communication_rounds, 2)); tst_perf_all = np.zeros((communication_rounds, 2))
+trn_perf_sel = np.zeros((args.communication_rounds, 2)); trn_perf_all = np.zeros((args.communication_rounds, 2))
+tst_perf_sel = np.zeros((args.communication_rounds, 2)); tst_perf_all = np.zeros((args.communication_rounds, 2))
 
 # average model
 avg_model = model_func().to(device)
@@ -134,43 +111,43 @@ cloud_model_param = get_model_params([cloud_model], n_param)[0]
 
 ###
 
-if not os.path.exists('Output/%s/%s_init_mdl.pt' %(data_obj.name, model_name)):
+if not os.path.exists('Output/%s/%s_iargs.nit_mdl.pt' %(data_obj.name, args.model_name)):
     print("New directory!")
     os.mkdir('Output/%s/' %(data_obj.name))
-    torch.save(init_model.state_dict(), 'Output/%s/%s_init_mdl.pt' %(data_obj.name, model_name))
+    torch.save(init_model.state_dict(), 'Output/%s/%s_iargs.nit_mdl.pt' %(data_obj.name, args.model_name))
 else:
     # Load model
-    init_model.load_state_dict(torch.load('Output/%s/%s_init_mdl.pt' %(data_obj.name, model_name)))   
+    init_model.load_state_dict(torch.load('Output/%s/%s_iargs.nit_mdl.pt' %(data_obj.name, args.model_name)))   
 
 ###
 # Start Training
 
 print('\nDevice: %s' %device)
 print("Training starts with algorithm: %s\n" %algorithm.name)
-print("The system is {}".format("noiseless" if noiseless else "noisy"))
+print("The system is {}".format("args.noiseless" if args.noiseless else "noisy"))
 
-for t in range(communication_rounds):
+for t in range(args.communication_rounds):
     
     print("This is the {0}-th trial".format(t+1))
 
     ref = (1e-10) ** 0.5
-    sigma_n = np.power(10, -SNR / 10)
+    sigma_n = np.power(10, -args.SNR / 10)
     sigma = sigma_n / ref**2 # [100,100+range]
 
     # set 2
     dx2 = (
-        np.random.rand(int(n_clients - np.round(n_clients / 2))) * location_range
+        np.random.rand(int(args.n_clients - np.round(args.n_clients / 2))) * args.location_range
         + 200
     )
 
     dx1 = (
-        np.random.rand(int(np.round(n_clients / 2))) * location_range - location_range
+        np.random.rand(int(np.round(args.n_clients / 2))) * args.location_range - args.location_range
     )  # [-location_range , 0]
     
     dx = np.concatenate((dx1, dx2))
     np.random.shuffle(dx)
     
-    dy = np.random.rand(n_clients) * 20 - 10
+    dy = np.random.rand(args.n_clients) * 20 - 10
     d_UR = (
         (dx - RIS[0]) ** 2
         + (dy - RIS[1]) ** 2
@@ -186,13 +163,13 @@ for t in range(communication_rounds):
     PL_direct = (
         BS_Gain
         * User_Gain
-        * (3 * 10**8 / fc / 4 / np.pi / d_direct) ** alpha_direct
+        * (3 * 10**8 / fc / 4 / np.pi / d_direct) ** args.alpha_direct
     )
     PL_RIS = (
         BS_Gain
         * User_Gain
         * RIS_Gain
-        * n_RIS_ele**2
+        * args.n_RIS_ele**2
         * dimen_RIS**2
         / 4
         / np.pi
@@ -201,41 +178,41 @@ for t in range(communication_rounds):
     )
     # channels
     h_d = (
-        np.random.randn(n_receive_antennas, n_clients)
-        + 1j * np.random.randn(n_receive_antennas, n_clients)
+        np.random.randn(args.n_receive_antennas, args.n_clients)
+        + 1j * np.random.randn(args.n_receive_antennas, args.n_clients)
     ) / 2**0.5
     h_d = h_d @ np.diag(PL_direct**0.5) / ref
     H_RB = (
-        np.random.randn(n_receive_antennas, n_RIS_ele)
-        + 1j * np.random.randn(n_receive_antennas, n_RIS_ele)
+        np.random.randn(args.n_receive_antennas, args.n_RIS_ele)
+        + 1j * np.random.randn(args.n_receive_antennas, args.n_RIS_ele)
     ) / 2**0.5
     h_UR = (
-        np.random.randn(n_RIS_ele, n_clients)
-        + 1j * np.random.randn(n_RIS_ele, n_clients)
+        np.random.randn(args.n_RIS_ele, args.n_clients)
+        + 1j * np.random.randn(args.n_RIS_ele, args.n_clients)
     ) / 2**0.5
     h_UR = h_UR @ np.diag(PL_RIS**0.5) / ref
 
-    G = np.zeros([n_receive_antennas, n_RIS_ele, n_clients], dtype=complex)
-    for j in range(n_clients):
+    G = np.zeros([args.n_receive_antennas, args.n_RIS_ele, args.n_clients], dtype=complex)
+    for j in range(args.n_clients):
         G[:, :, j] = H_RB @ np.diag(h_UR[:, j])
     x = x0
 
     start = time.time()
-    print("\ninitial x = ", x)
+    print("\niargs.nitial x = ", x)
     print()
     [x_store, obj_new, f_store, theta_store] = gibbs.optimize(h_d, G, x, sigma)
-    print("final x = ", x_store[Jmax])
+    print("final x = ", x_store[args.Jmax])
     print("final obj = ", obj_new)
     end = time.time()
     print("Running time: {} seconds\n".format(end - start))
     
-    theta_optim = theta_store[:, Jmax]
+    theta_optim = theta_store[:, args.Jmax]
 
-    h_optim = np.zeros([n_receive_antennas, n_clients], dtype=complex)
-    for i in range(n_clients):
+    h_optim = np.zeros([args.n_receive_antennas, args.n_clients], dtype=complex)
+    for i in range(args.n_clients):
         h_optim[:, i] = h_d[:, i] + G[:, :, i] @ theta_optim
 
-    selected_optim = x_store[Jmax]
+    selected_optim = x_store[args.Jmax]
     selected_clnts_idx = np.where(selected_optim == 1)[0] # get the index of the selected clients
     selected_clnts = clients_list[selected_clnts_idx]
     
@@ -269,11 +246,11 @@ for t in range(communication_rounds):
         "all_model": all_model,
         "cloud_model": cloud_model,
         "cloud_model_param": cloud_model_param,
-        "noiseless": noiseless
+        "args.noiseless": args.noiseless
     }
-    if not noiseless:
+    if not args.noiseless:
         inputs["x"] = selected_optim
-        inputs["f"] = f_store[:, Jmax]
+        inputs["f"] = f_store[:, args.Jmax]
         inputs["h"] = h_optim
         inputs["sigma"] = sigma
         
@@ -287,4 +264,4 @@ for t in range(communication_rounds):
     # get the test accuracy
     algorithm.evaluate(data_obj, cent_x, cent_y, avg_model, all_model, device, tst_perf_sel, trn_perf_sel, tst_perf_all, trn_perf_all, t)
 
-save_performance(communication_rounds, tst_perf_all, algorithm.name, data_obj.name, n_clients, noiseless)
+save_performance(args.communication_rounds, tst_perf_all, algorithm.name, data_obj.name, args.n_clients, args.noiseless)
