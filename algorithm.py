@@ -10,7 +10,7 @@ from utils import *
 
 
 class Algorithm:
-    def __init__(self, name, act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, air_comp, save_period, print_per):
+    def __init__(self, name, act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, max_norm, air_comp, save_period, print_per):
         self.name               = name
         self.act_prob           = act_prob
         self.lr                 = lr
@@ -22,6 +22,7 @@ class Algorithm:
         self.init_model         = init_model
         self.data_obj           = data_obj
         self.n_param            = n_param
+        self.max_norm           = max_norm
         self.air_comp           = air_comp
         self.save_period        = save_period
         self.print_per          = print_per
@@ -54,11 +55,10 @@ class Algorithm:
 ###
 
 class FedDyn(Algorithm):
-    def __init__(self, act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, air_comp, save_period, print_per, alpha_coef, max_norm):
-        super().__init__("FedDyn", act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, air_comp, save_period, print_per)
+    def __init__(self, act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, max_norm, air_comp, save_period, print_per, alpha_coef):
+        super().__init__("FedDyn", act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, max_norm, air_comp, save_period, print_per)
         
         self.alpha_coef = alpha_coef
-        self.max_norm   = max_norm
     
     # override
     def local_train(self, client: Client, inputs: dict):
@@ -173,10 +173,8 @@ class FedDyn(Algorithm):
 ###
 
 class FedAvg(Algorithm):
-    def __init__(self, act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, air_comp, save_period, print_per, max_norm):
-        super().__init__("FedAvg", act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, air_comp, save_period, print_per)
-        
-        self.max_norm = max_norm
+    def __init__(self, act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, max_norm, air_comp, save_period, print_per):
+        super().__init__("FedAvg", act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, max_norm, air_comp, save_period, print_per)
     
     # override
     def local_train(self, client: Client, inputs: dict):
@@ -262,13 +260,35 @@ class FedAvg(Algorithm):
 ###
 
 class FedProx(Algorithm):
-    def __init__(self, act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per):
-        super().__init__("FedProx", act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, save_period, print_per)
+    def __init__(self, act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, max_norm, air_comp, save_period, print_per):
+        super().__init__("FedProx", act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, max_norm, air_comp, save_period, print_per)
     
     # override
     def local_train(self, client: Client, inputs: dict):
         pass
     
+    def _train_model(self, model, trn_x, trn_y, curr_round):
+        pass
+    
     # override
     def aggregate(self, inputs: dict):
         pass
+    
+###
+
+class SCAFFOLD(Algorithm):
+    def __init__(self, act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, max_norm, air_comp, save_period, print_per):
+        super().__init__("SCAFFOLD", act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, max_norm, air_comp, save_period, print_per)
+        
+    # override
+    def local_train(self, client: Client, inputs: dict):
+        pass
+    
+    def _train_model(self, model, trn_x, trn_y, curr_round):
+        pass
+    
+    # override
+    def aggregate(self, inputs: dict):
+        pass
+    
+    

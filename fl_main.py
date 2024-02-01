@@ -47,7 +47,6 @@ n_param       = len(init_par_list)
 
 # FedDyn parameters
 alpha_coef    = 1e-2
-max_norm      = 10
 
 ###
 # Channel setup
@@ -76,9 +75,9 @@ np.random.seed(args.rand_seed)
 ###
 # FL system components
 
-# algorithm = FedDyn(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, air_comp, args.save_period, args.print_per, alpha_coef, max_norm)
+# algorithm = FedDyn(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, args.max_norm, air_comp, args.save_period, args.print_per, alpha_coef)
 
-algorithm = FedAvg(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, air_comp, args.save_period, args.print_per, max_norm)
+algorithm = FedAvg(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, args.max_norm, air_comp, args.save_period, args.print_per)
 
 clients_list = np.array([Client(algorithm=algorithm,
                                 device=device, 
