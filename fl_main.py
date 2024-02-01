@@ -26,14 +26,16 @@ client_x_all = data_obj.clnt_x
 client_y_all = data_obj.clnt_y
 cent_x = np.concatenate(client_x_all, axis=0)
 cent_y = np.concatenate(client_y_all, axis=0)
-dataset      = data_obj.dataset
+dataset = data_obj.dataset
 
 ###
 
 # the weight corresponds to the number of data that the client i has
 # the more data the client has, the larger the weight is
 weight_list   = np.asarray([len(client_y_all[i]) for i in range(args.n_clients)])
-weight_list   = weight_list / np.sum(weight_list) * args.n_clients
+# weight_list   = weight_list / np.sum(weight_list) * args.n_clients  # FedDyn initialization
+# weight_list = weight_list.reshape((args.n_clients, 1))
+print('weight_list.shape = ', weight_list.shape)
 
 # global parameters
 device        = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -76,7 +78,9 @@ np.random.seed(args.rand_seed)
 ###
 # FL system components
 
-algorithm = FedDyn(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, air_comp, args.save_period, args.print_per, alpha_coef, max_norm)
+# algorithm = FedDyn(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, air_comp, args.save_period, args.print_per, alpha_coef, max_norm)
+
+algorithm = FedAvg(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, air_comp, args.save_period, args.print_per, max_norm)
 
 clients_list = np.array([Client(algorithm=algorithm,
                                 device=device, 
@@ -223,43 +227,64 @@ for t in range(args.comm_rounds):
         # Train locally 
         print('---- Training client %d' %selected_clnts_idx[i])
         
-        feddyn_inputs = {
+        # feddyn_inputs = {
+        #     "curr_round": t,
+        #     "cloud_model": cloud_model,
+        #     "cloud_model_param_tensor": cloud_model_param_tensor,
+        #     "cloud_model_param": cloud_model_param,
+        #     "local_param": local_param_list[selected_clnts_idx[i]]
+        # }
+        
+        fedavg_inputs = {
             "curr_round": t,
-            "cloud_model": cloud_model,
-            "cloud_model_param_tensor": cloud_model_param_tensor,
-            "cloud_model_param": cloud_model_param,
-            "local_param": local_param_list[selected_clnts_idx[i]]
+            "avg_model": avg_model,
         }
         
-        client.local_train(feddyn_inputs)
+        client.local_train(fedavg_inputs)
         
-        # update the parameters
-        local_param_list[selected_clnts_idx[i]] = feddyn_inputs["local_param"]
+        # update the parameters (For FedDyn)
+        # local_param_list[selected_clnts_idx[i]] = fedavg_inputs["local_param"]
     
-    inputs = {
+    # feddyn_inputs = {
+    #     "clients_list": clients_list,
+    #     "selected_clnts_idx": selected_clnts_idx,
+    #     "local_param_list": local_param_list,
+    #     "avg_model": avg_model,
+    #     "all_model": all_model,
+    #     "cloud_model": cloud_model,
+    #     "cloud_model_param": cloud_model_param,
+    #     "noiseless": args.noiseless
+    # }
+    
+    fedavg_inputs = {
         "clients_list": clients_list,
         "selected_clnts_idx": selected_clnts_idx,
-        "local_param_list": local_param_list,
+        "weight_list": weight_list,
         "avg_model": avg_model,
         "all_model": all_model,
-        "cloud_model": cloud_model,
-        "cloud_model_param": cloud_model_param,
         "noiseless": args.noiseless
     }
     # pass the AirComp optimization parameters
     if not args.noiseless:
-        inputs["x"] = selected_optim
-        inputs["f"] = f_store[:, args.Jmax]
-        inputs["h"] = h_optim
-        inputs["sigma"] = sigma
+        # feddyn_inputs["x"] = selected_optim
+        # feddyn_inputs["f"] = f_store[:, args.Jmax]
+        # feddyn_inputs["h"] = h_optim
+        # feddyn_inputs["sigma"] = sigma
         
-    server.aggregate(inputs)
+        fedavg_inputs["x"] = selected_optim
+        fedavg_inputs["f"] = f_store[:, args.Jmax]
+        fedavg_inputs["h"] = h_optim
+        fedavg_inputs["sigma"] = sigma
+        
+    server.aggregate(fedavg_inputs)
     
     # update the parameters after aggregation
-    avg_model = inputs["avg_model"]
-    all_model = inputs["all_model"]
-    cloud_model = inputs["cloud_model"]
-    cloud_model_param = inputs["cloud_model_param"]
+    avg_model = fedavg_inputs["avg_model"]
+    all_model = fedavg_inputs["all_model"]
+    
+    # For FedDyn
+    # cloud_model = fedavg_inputs["cloud_model"]
+    # cloud_model_param = fedavg_inputs["cloud_model_param"]
 
     # get the test accuracy
     algorithm.evaluate(data_obj, cent_x, cent_y, avg_model, all_model, device, tst_perf_sel, trn_perf_sel, tst_perf_all, trn_perf_all, t)
