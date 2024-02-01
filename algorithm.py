@@ -56,6 +56,7 @@ class Algorithm:
 class FedDyn(Algorithm):
     def __init__(self, act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, air_comp, save_period, print_per, alpha_coef, max_norm):
         super().__init__("FedDyn", act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, air_comp, save_period, print_per)
+        
         self.alpha_coef = alpha_coef
         self.max_norm   = max_norm
     
@@ -146,6 +147,7 @@ class FedDyn(Algorithm):
                 
         return model
 
+
     # override
     def aggregate(self, inputs: dict):
         clients_list = inputs["clients_list"]
@@ -191,7 +193,7 @@ class FedAvg(Algorithm):
         print("client model parameters : ", client.model.parameters())
         client.model = self._train_model(client.model, trn_x, trn_y, inputs["curr_round"])
         updated_param = get_model_params([client.model], self.n_param)[0]
-        print("after updating : ", updated_param)
+        print("after updating, client model parameters : ", updated_param)
 
         client.client_param = updated_param
     
@@ -211,7 +213,7 @@ class FedAvg(Algorithm):
             # Training
             
             trn_gen_iter = trn_gen.__iter__()
-            for i in range(int(np.ceil(n_trn/self.batch_size))):
+            for _ in range(int(np.ceil(n_trn / self.batch_size))):
                 batch_x, batch_y = trn_gen_iter.__next__()
                 batch_x = batch_x.to(self.device)
                 batch_y = batch_y.to(self.device)
@@ -237,10 +239,13 @@ class FedAvg(Algorithm):
                 
         return model
     
+    
     # override
     def aggregate(self, inputs: dict):
         clients_list = inputs["clients_list"]
         all_clients_param_list = np.array([client.client_param for client in clients_list])
+        inputs["weight_list"] = inputs["weight_list"].reshape((-1, 1))
+        print("inputs[weight_list].shape = ", inputs["weight_list"].shape)
         
         avg_mdl_param = None
         if not inputs["noiseless"]:
@@ -248,10 +253,11 @@ class FedAvg(Algorithm):
             avg_mdl_param = self.air_comp.transmission(self.n_param, all_clients_param_list[inputs["selected_clnts_idx"]], inputs["x"], inputs["f"], inputs["h"], inputs["sigma"])
         else:
             avg_mdl_param = np.sum(all_clients_param_list[inputs["selected_clnts_idx"]]*inputs["weight_list"][inputs["selected_clnts_idx"]]/np.sum(inputs["weight_list"][inputs["selected_clnts_idx"]]), axis=0)
+            
+        device = clients_list[0].device
         
-        inputs["avg_model"] = set_client_from_params(self.model_func(), avg_mdl_param)
-        
-        inputs["all_model"] = set_client_from_params(self.model_func(), np.sum(all_clients_param_list*inputs["weight_list"]/np.sum(inputs["weight_list"]), axis = 0))
+        inputs["avg_model"] = set_client_from_params(self.model_func(), avg_mdl_param, device)
+        inputs["all_model"] = set_client_from_params(self.model_func(), np.sum(all_clients_param_list*inputs["weight_list"]/np.sum(inputs["weight_list"]), axis = 0), device)
 
 ###
 

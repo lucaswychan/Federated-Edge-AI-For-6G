@@ -38,16 +38,16 @@ def set_client_from_params(model, params, device):
     model.load_state_dict(dict_param)    
     return model
 
-def get_acc_loss(data_x, data_y, model, dataset_name, device, w_decay = None):
+def get_acc_loss(data_x, data_y, model, dataset_name, device, w_decay = None, batch_size=50):
     acc_overall = 0; loss_overall = 0;
     loss_fn = torch.nn.CrossEntropyLoss(reduction='sum')
-    batch_size = min(6000, data_x.shape[0])
+    # batch_size = min(6000, data_x.shape[0])
     n_tst = data_x.shape[0]
     tst_gen = data.DataLoader(Dataset(data_x, data_y, dataset_name=dataset_name), batch_size=batch_size, shuffle=False)
     model.eval(); model = model.to(device)
     with torch.no_grad():
         tst_gen_iter = tst_gen.__iter__()
-        for _ in range(int(np.ceil(n_tst/batch_size))):
+        for _ in range(int(np.ceil(n_tst / batch_size))):
             batch_x, batch_y = tst_gen_iter.__next__()
             batch_x = batch_x.to(device)
             batch_y = batch_y.to(device)

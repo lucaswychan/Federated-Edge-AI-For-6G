@@ -34,8 +34,6 @@ dataset = data_obj.dataset
 # the more data the client has, the larger the weight is
 weight_list   = np.asarray([len(client_y_all[i]) for i in range(args.n_clients)])
 # weight_list   = weight_list / np.sum(weight_list) * args.n_clients  # FedDyn initialization
-# weight_list = weight_list.reshape((args.n_clients, 1))
-print('weight_list.shape = ', weight_list.shape)
 
 # global parameters
 device        = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -245,16 +243,16 @@ for t in range(args.comm_rounds):
         # update the parameters (For FedDyn)
         # local_param_list[selected_clnts_idx[i]] = fedavg_inputs["local_param"]
     
-    # feddyn_inputs = {
-    #     "clients_list": clients_list,
-    #     "selected_clnts_idx": selected_clnts_idx,
-    #     "local_param_list": local_param_list,
-    #     "avg_model": avg_model,
-    #     "all_model": all_model,
-    #     "cloud_model": cloud_model,
-    #     "cloud_model_param": cloud_model_param,
-    #     "noiseless": args.noiseless
-    # }
+    feddyn_inputs = {
+        "clients_list": clients_list,
+        "selected_clnts_idx": selected_clnts_idx,
+        "local_param_list": local_param_list,
+        "avg_model": avg_model,
+        "all_model": all_model,
+        "cloud_model": cloud_model,
+        "cloud_model_param": cloud_model_param,
+        "noiseless": args.noiseless
+    }
     
     fedavg_inputs = {
         "clients_list": clients_list,
