@@ -6,7 +6,8 @@ import numpy as np
 import torch
 
 from air_comp import AirComp
-from algorithm import FedAvg, FedDyn, FedProx
+from algorithm.fedavg import FedAvg
+from algorithm.feddyn import FedDyn
 from args import args_parser
 from client import Client
 from dataset import DatasetObject

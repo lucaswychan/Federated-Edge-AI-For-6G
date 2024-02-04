@@ -25,7 +25,7 @@ class AirComp(object):
         g_bar = K @ mean
 
         var = np.var(g, axis=1)
-        var[var < 1e-3] = 1e-3
+        # var[var < 1e-3] = 1e-3
         var_sqrt = var**0.5
 
         eta = np.min(self.transmit_power * inner2 / K2 / var) # from (17)
@@ -42,6 +42,8 @@ class AirComp(object):
 
         x_signal = np.tile(b / var_sqrt, (d, 1)).T * (g - np.tile(mean, (d, 1)).T)
         y = h[:, index] @ x_signal + n
-        w = np.real((f.conj() @ y / eta_sqrt + g_bar))  / sum(K)   # delete to divide by sum(K) as it is not necessary  # (11)
+        w = np.real((f.conj() @ y / eta_sqrt + g_bar)) / sum(K)   # delete to divide by sum(K) as it is not necessary  # (11)
+        
+        w = (w - np.mean(w)) / np.std(w)
 
         return w
