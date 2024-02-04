@@ -44,6 +44,6 @@ class AirComp(object):
         y = h[:, index] @ x_signal + n
         w = np.real((f.conj() @ y / eta_sqrt + g_bar)) / sum(K)   # delete to divide by sum(K) as it is not necessary  # (11)
         
-        w = (w - np.mean(w)) / np.std(w)
+        w = (w - np.mean(w, axis=1)) / np.std(w, axis=1)    # normalize it to reduce the value of the parameters
 
         return w
