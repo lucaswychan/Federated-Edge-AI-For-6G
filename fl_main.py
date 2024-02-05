@@ -9,6 +9,7 @@ from air_comp import AirComp
 from algorithm.fedavg import FedAvg
 from algorithm.feddyn import FedDyn
 from args import args_parser
+from channel import Channel
 from client import Client
 from dataset import DatasetObject
 from model import Model
@@ -62,6 +63,8 @@ BS            = np.array([-50, 0, 10])  # Cartesian coordinate of BS
 RIS           = np.array([0, 0, 10])    # Cartesian coordinate of RIS
 #
 x0            = np.ones([args.n_clients], dtype=int)
+#
+channel = Channel(SNR=args.SNR, n_clients=args.n_clients, location_range=args.location_range, fc=fc, alpha_direct=args.alpha_direct, n_RIS_ele=args.n_RIS_ele, n_receive_ant=args.n_receive_ant, User_Gain=User_Gain, x0=x0, BS=BS, BS_Gain=BS_Gain, RIS=RIS, RIS_Gain=RIS_Gain, dimen_RIS=dimen_RIS)
 
 # parameters passed to Gibbs
 K             = np.asarray([len(client_y_all[i]) for i in range(args.n_clients)])
@@ -76,9 +79,9 @@ np.random.seed(args.rand_seed)
 ###
 # FL system components
 
-# algorithm = FedDyn(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, args.max_norm, air_comp, args.save_period, args.print_per, alpha_coef)
+algorithm = FedDyn(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, args.max_norm, air_comp, args.save_period, args.print_per, alpha_coef)
 
-algorithm = FedAvg(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, args.max_norm, air_comp, args.save_period, args.print_per)
+# algorithm = FedAvg(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, args.max_norm, air_comp, args.save_period, args.print_per)
 
 clients_list = np.array([Client(algorithm=algorithm,
                                 device=device, 
@@ -123,84 +126,25 @@ cloud_model_param = get_model_params([cloud_model], n_param)[0]
 
 ###
 # Start Training
-
-print('\nDevice: %s' %device)
+print()
+print("=" * 80)
+print('Device: %s' %device)
+print("Model: %s" %args.model_name)
+print("Epochs: %d" %args.epoch)
+print("Number of clients: %d" %args.n_clients)
+print("Number of communication rounds: %d" %args.comm_rounds)
 print("Training starts with algorithm: %s\n" %algorithm.name)
 print("The system is {}".format("noiseless" if args.noiseless else "noisy"))
+print("=" * 80, end="\n\n")
 
 for t in range(args.comm_rounds):
     
     print("This is the {0}-th trial".format(t+1))
 
-    ref = (1e-10) ** 0.5
-    sigma_n = np.power(10, -args.SNR / 10)
-    sigma = sigma_n / ref**2 # [100,100+range]
-
-    # set 2
-    dx2 = (
-        np.random.rand(int(args.n_clients - np.round(args.n_clients / 2))) * args.location_range
-        + 200
-    )
-
-    dx1 = (
-        np.random.rand(int(np.round(args.n_clients / 2))) * args.location_range - args.location_range
-    )  # [-location_range , 0]
-    
-    dx = np.concatenate((dx1, dx2))
-    np.random.shuffle(dx)
-    
-    dy = np.random.rand(args.n_clients) * 20 - 10
-    d_UR = (
-        (dx - RIS[0]) ** 2
-        + (dy - RIS[1]) ** 2
-        + RIS[2] ** 2
-    ) ** 0.5
-    d_RB = np.linalg.norm(BS - RIS)
-    d_RIS_total = d_UR + d_RB
-    d_direct = (
-        (dx - BS[0]) ** 2
-        + (dy - BS[1]) ** 2
-        + BS[2] ** 2
-    ) ** 0.5
-    PL_direct = (
-        BS_Gain
-        * User_Gain
-        * (3 * 10**8 / fc / 4 / np.pi / d_direct) ** args.alpha_direct
-    )
-    PL_RIS = (
-        BS_Gain
-        * User_Gain
-        * RIS_Gain
-        * args.n_RIS_ele**2
-        * dimen_RIS**2
-        / 4
-        / np.pi
-        * (3 * 10**8 / fc / 4 / np.pi / d_UR) ** 2
-        * (3 * 10**8 / fc / 4 / np.pi / d_RB) ** 2
-    )
-    # channels
-    h_d = (
-        np.random.randn(args.n_receive_ant, args.n_clients)
-        + 1j * np.random.randn(args.n_receive_ant, args.n_clients)
-    ) / 2**0.5
-    h_d = h_d @ np.diag(PL_direct**0.5) / ref
-    H_RB = (
-        np.random.randn(args.n_receive_ant, args.n_RIS_ele)
-        + 1j * np.random.randn(args.n_receive_ant, args.n_RIS_ele)
-    ) / 2**0.5
-    h_UR = (
-        np.random.randn(args.n_RIS_ele, args.n_clients)
-        + 1j * np.random.randn(args.n_RIS_ele, args.n_clients)
-    ) / 2**0.5
-    h_UR = h_UR @ np.diag(PL_RIS**0.5) / ref
-
-    G = np.zeros([args.n_receive_ant, args.n_RIS_ele, args.n_clients], dtype=complex)
-    for j in range(args.n_clients):
-        G[:, :, j] = H_RB @ np.diag(h_UR[:, j])
-    x = x0
+    h_d, G, x, sigma = channel.generate()
 
     start = time.time()
-    [x_store, obj_new, f_store, theta_store] = gibbs.optimize(h_d, G, x, sigma)
+    x_store, obj_new, f_store, theta_store = gibbs.optimize(h_d, G, x, sigma)
     end = time.time()
     print("Running time of Gibbs Optimization: {} seconds\n".format(end - start))
     
@@ -225,23 +169,23 @@ for t in range(args.comm_rounds):
         # Train locally 
         print('---- Training client %d' %selected_clnts_idx[i])
         
-        # feddyn_inputs = {
-        #     "curr_round": t,
-        #     "cloud_model": cloud_model,
-        #     "cloud_model_param_tensor": cloud_model_param_tensor,
-        #     "cloud_model_param": cloud_model_param,
-        #     "local_param": local_param_list[selected_clnts_idx[i]]
-        # }
+        feddyn_inputs = {
+            "curr_round": t,
+            "cloud_model": cloud_model,
+            "cloud_model_param_tensor": cloud_model_param_tensor,
+            "cloud_model_param": cloud_model_param,
+            "local_param": local_param_list[selected_clnts_idx[i]]
+        }
         
         fedavg_inputs = {
             "curr_round": t,
             "avg_model": avg_model,
         }
         
-        client.local_train(fedavg_inputs)
+        client.local_train(feddyn_inputs)
         
         # update the parameters (For FedDyn)
-        # local_param_list[selected_clnts_idx[i]] = fedavg_inputs["local_param"]
+        local_param_list[selected_clnts_idx[i]] = fedavg_inputs["local_param"]
     
     feddyn_inputs = {
         "clients_list": clients_list,
@@ -264,25 +208,25 @@ for t in range(args.comm_rounds):
     }
     # pass the AirComp optimization parameters
     if not args.noiseless:
-        # feddyn_inputs["x"] = selected_optim
-        # feddyn_inputs["f"] = f_store[:, args.Jmax]
-        # feddyn_inputs["h"] = h_optim
-        # feddyn_inputs["sigma"] = sigma
+        feddyn_inputs["x"] = selected_optim
+        feddyn_inputs["f"] = f_store[:, args.Jmax]
+        feddyn_inputs["h"] = h_optim
+        feddyn_inputs["sigma"] = sigma
         
-        fedavg_inputs["x"] = selected_optim
-        fedavg_inputs["f"] = f_store[:, args.Jmax]
-        fedavg_inputs["h"] = h_optim
-        fedavg_inputs["sigma"] = sigma
+        # fedavg_inputs["x"] = selected_optim
+        # fedavg_inputs["f"] = f_store[:, args.Jmax]
+        # fedavg_inputs["h"] = h_optim
+        # fedavg_inputs["sigma"] = sigma
         
-    server.aggregate(fedavg_inputs)
+    server.aggregate(feddyn_inputs)
     
     # update the parameters after aggregation
     avg_model = fedavg_inputs["avg_model"]
     all_model = fedavg_inputs["all_model"]
     
     # For FedDyn
-    # cloud_model = fedavg_inputs["cloud_model"]
-    # cloud_model_param = fedavg_inputs["cloud_model_param"]
+    cloud_model = fedavg_inputs["cloud_model"]
+    cloud_model_param = fedavg_inputs["cloud_model_param"]
 
     # get the test accuracy
     algorithm.evaluate(data_obj, cent_x, cent_y, avg_model, all_model, device, tst_perf_sel, trn_perf_sel, tst_perf_all, trn_perf_all, t)
