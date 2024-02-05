@@ -3,22 +3,22 @@ import numpy as np
 
 class Channel(object):
     def __init__(self, SNR, n_clients, location_range, fc, alpha_direct, n_RIS_ele, n_receive_ant, User_Gain, x0, BS, BS_Gain, RIS, RIS_Gain, dimen_RIS):
-        self.SNR = SNR
-        self.n_clients = n_clients
+        self.SNR            = SNR
+        self.n_clients      = n_clients
         self.location_range = location_range
-        self.fc = fc
-        self.alpha_direct = alpha_direct
-        self.n_RIS_ele = n_RIS_ele
-        self.n_receive_ant = n_receive_ant
-        self.User_Gain = User_Gain
-        self.x = x0
+        self.fc             = fc
+        self.alpha_direct   = alpha_direct
+        self.n_RIS_ele      = n_RIS_ele
+        self.n_receive_ant  = n_receive_ant
+        self.User_Gain      = User_Gain
+        self.x              = x0
         
-        self.BS = BS
-        self.BS_Gain = BS_Gain
+        self.BS             = BS
+        self.BS_Gain        = BS_Gain
         
-        self.RIS = RIS
-        self.RIS_Gain = RIS_Gain
-        self.dimen_RIS = dimen_RIS
+        self.RIS            = RIS
+        self.RIS_Gain       = RIS_Gain
+        self.dimen_RIS      = dimen_RIS
     
     def generate(self):
         ref = (1e-10) ** 0.5
