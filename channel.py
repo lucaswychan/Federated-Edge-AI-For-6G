@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class Channel(object):
     def __init__(self, SNR, n_clients, location_range, fc, alpha_direct, n_RIS_ele, n_receive_ant, User_Gain, x0, BS, BS_Gain, RIS, RIS_Gain, dimen_RIS):
         self.SNR = SNR

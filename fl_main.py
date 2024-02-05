@@ -185,7 +185,7 @@ for t in range(args.comm_rounds):
         client.local_train(feddyn_inputs)
         
         # update the parameters (For FedDyn)
-        local_param_list[selected_clnts_idx[i]] = fedavg_inputs["local_param"]
+        local_param_list[selected_clnts_idx[i]] = feddyn_inputs["local_param"]
     
     feddyn_inputs = {
         "clients_list": clients_list,
