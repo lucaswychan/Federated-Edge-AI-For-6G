@@ -26,7 +26,7 @@ def get_model_params(model_list, n_par=None):
             idx += len(temp)
     return np.copy(param_mat)  # param_mat =  [[ 0.09114207 -0.10681842  0.10701807 ...  0.07207876  0.00579278   -0.0345436 ]]
 
-def set_client_from_params(model, params, device):
+def set_model(model, params, device):
     dict_param = copy.deepcopy(dict(model.named_parameters()))
     idx = 0
     for name, param in model.named_parameters():

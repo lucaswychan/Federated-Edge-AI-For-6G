@@ -96,5 +96,5 @@ class FedAvg(Algorithm):
         
         print("avg_mdl_param = ", avg_mdl_param)
         
-        inputs["avg_model"] = set_client_from_params(self.model_func(), avg_mdl_param, device)
-        inputs["all_model"] = set_client_from_params(self.model_func(), np.sum(all_clients_param_list*weight_list/np.sum(weight_list), axis = 0), device)
+        inputs["avg_model"] = set_model(self.model_func(), avg_mdl_param, device)
+        inputs["all_model"] = set_model(self.model_func(), np.sum(all_clients_param_list*weight_list/np.sum(weight_list), axis = 0), device)

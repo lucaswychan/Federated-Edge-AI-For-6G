@@ -124,6 +124,6 @@ class FedDyn(Algorithm):
         
         device = clients_list[0].device
 
-        inputs["avg_model"] = set_client_from_params(self.model_func(), avg_mdl_param, device)
-        inputs["all_model"] = set_client_from_params(self.model_func(), np.mean(all_clients_param_list, axis = 0), device)
-        inputs["cloud_model"] = set_client_from_params(self.model_func().to(device), inputs["cloud_model_param"], device) 
+        inputs["avg_model"] = set_model(self.model_func(), avg_mdl_param, device)
+        inputs["all_model"] = set_model(self.model_func(), np.mean(all_clients_param_list, axis = 0), device)
+        inputs["cloud_model"] = set_model(self.model_func().to(device), inputs["cloud_model_param"], device) 
