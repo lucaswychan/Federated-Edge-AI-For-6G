@@ -19,7 +19,7 @@ def args_parser():
     
     parser.add_argument('--epoch', type=int, default=5, help="local epoch for client training")
     
-    parser.add_argument('--weight_decay', type=float, default=1e-3, help="weight decay")
+    parser.add_argument('--weight_decay', type=float, default=1e-2, help="weight decay")
     
     parser.add_argument('--max_norm', type=float, default=10, help="max norm for gradient clipping")
     
@@ -47,13 +47,13 @@ def args_parser():
     
     parser.add_argument('--RISON', type=bool, default=True, help="whether RIS is on")
     
-    parser.add_argument('--tau', type=float, default=1.0, help="tau, the SCA regularization term")
+    parser.add_argument('--tau', type=float, default=0.5, help="tau, the SCA regularization term")
     
     parser.add_argument('--nit', type=int, default=100, help="I_max, number of maximum SCA loops")
     
     parser.add_argument('--threshold', type=float, default=1e-2, help="epsilon, SCA early stopping criteria")
     
-    parser.add_argument('--transmit_power', type=float, default=0.1, help="transmit power")
+    parser.add_argument('--transmit_power', type=float, default=0.05, help="transmit power")
     
     parser.add_argument('--noiseless', type=bool, default=False, help="whether the channel is noiseless")
     
