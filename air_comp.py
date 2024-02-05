@@ -42,8 +42,6 @@ class AirComp(object):
 
         x_signal = np.tile(b / var_sqrt, (d, 1)).T * (g - np.tile(mean, (d, 1)).T)
         y = h[:, index] @ x_signal + n
-        w = np.real((f.conj() @ y / eta_sqrt + g_bar)) / sum(K)   # delete to divide by sum(K) as it is not necessary  # (11)
-        
-        w = (w - np.mean(w, axis=1)) / np.std(w, axis=1)    # normalize it to reduce the value of the parameters
+        w = np.real((f.conj() @ y / eta_sqrt + g_bar)) / np.sum(K)   # delete to divide by sum(K) as it is not necessary  # (11)
 
         return w
