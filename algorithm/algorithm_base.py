@@ -4,7 +4,7 @@ from utils import get_acc_loss
 
 
 class Algorithm:
-    def __init__(self, name, act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, max_norm, air_comp, save_period, print_per):
+    def __init__(self, name, act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, max_norm, air_comp, noiseless, save_period, print_per):
         self.name               = name
         self.act_prob           = act_prob
         self.lr                 = lr
@@ -18,6 +18,7 @@ class Algorithm:
         self.n_param            = n_param
         self.max_norm           = max_norm
         self.air_comp           = air_comp
+        self.noiseless          = noiseless
         self.save_period        = save_period
         self.print_per          = print_per
         

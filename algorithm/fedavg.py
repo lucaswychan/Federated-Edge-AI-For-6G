@@ -10,8 +10,8 @@ from utils import *
 
 
 class FedAvg(Algorithm):
-    def __init__(self, act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, max_norm, air_comp, save_period, print_per):
-        super().__init__("FedAvg", act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, max_norm, air_comp, save_period, print_per)
+    def __init__(self, act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, max_norm, air_comp, noiseless, save_period, print_per):
+        super().__init__("FedAvg", act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, max_norm, air_comp, noiseless, save_period, print_per)
     
     # override
     def local_train(self, client: Client, inputs: dict):
@@ -86,7 +86,7 @@ class FedAvg(Algorithm):
         print("weight_list.shape = ", weight_list.shape)
         
         avg_mdl_param = None
-        if not inputs["noiseless"]:
+        if not self.noiseless:
             print("\nStart AirComp Transmission")
             avg_mdl_param = self.air_comp.transmission(self.n_param, all_clients_param_list[selected_clnts_idx], inputs["x"], inputs["f"], inputs["h"], inputs["sigma"])
         else:

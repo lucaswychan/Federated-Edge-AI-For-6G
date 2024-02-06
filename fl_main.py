@@ -37,7 +37,7 @@ def main():
     # the weight corresponds to the number of data that the client i has
     # the more data the client has, the larger the weight is
     weight_list   = np.asarray([len(client_y_all[i]) for i in range(args.n_clients)])
-    # weight_list   = weight_list / np.sum(weight_list) * args.n_clients  # FedDyn initialization
+    weight_list   = weight_list / np.sum(weight_list) * args.n_clients  # FedDyn initialization
 
     # global parameters
     device        = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -81,9 +81,9 @@ def main():
     ###
     # FL system components
 
-    algorithm = FedDyn(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, args.max_norm, air_comp, args.save_period, args.print_per, alpha_coef)
+    algorithm = FedDyn(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, args.max_norm, air_comp, args.noiseless, args.save_period, args.print_per, alpha_coef)
 
-    # algorithm = FedAvg(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, args.max_norm, air_comp, args.save_period, args.print_per)
+    # algorithm = FedAvg(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, args.max_norm, air_comp, args.noiseless, args.save_period, args.print_per)
 
     clients_list = np.array([Client(algorithm=algorithm,
                                     device=device, 
@@ -197,7 +197,6 @@ def main():
             "all_model": all_model,
             "cloud_model": cloud_model,
             "cloud_model_param": cloud_model_param,
-            "noiseless": args.noiseless
         }
         
         fedavg_inputs = {
@@ -206,7 +205,6 @@ def main():
             "weight_list": weight_list,
             "avg_model": avg_model,
             "all_model": all_model,
-            "noiseless": args.noiseless
         }
         # pass the AirComp optimization parameters
         if not args.noiseless:
