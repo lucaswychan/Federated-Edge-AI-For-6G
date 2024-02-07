@@ -14,7 +14,6 @@ from client import Client
 from dataset import DatasetObject
 from model import Model
 from optimize import *
-from server import Server
 from utils import *
 
 
@@ -51,6 +50,9 @@ def main():
 
     # FedDyn parameters
     alpha_coef    = 1e-2
+    
+    #
+    np.random.seed(args.rand_seed)
 
     ###
     # Channel setup
@@ -66,17 +68,11 @@ def main():
     #
     x0            = np.ones([args.n_clients], dtype=int)
     #
-    channel = Channel(SNR=args.SNR, n_clients=args.n_clients, location_range=args.location_range, fc=fc, alpha_direct=args.alpha_direct, n_RIS_ele=args.n_RIS_ele, n_receive_ant=args.n_receive_ant, User_Gain=User_Gain, x0=x0, BS=BS, BS_Gain=BS_Gain, RIS=RIS, RIS_Gain=RIS_Gain, dimen_RIS=dimen_RIS)
+    channel       = Channel(SNR=args.SNR, n_clients=args.n_clients, location_range=args.location_range, fc=fc, alpha_direct=args.alpha_direct, n_RIS_ele=args.n_RIS_ele, n_receive_ant=args.n_receive_ant, User_Gain=User_Gain, x0=x0, BS=BS, BS_Gain=BS_Gain, RIS=RIS, RIS_Gain=RIS_Gain, dimen_RIS=dimen_RIS)
 
-    # parameters passed to Gibbs
-    K             = np.asarray([len(client_y_all[i]) for i in range(args.n_clients)])
-    #
     gibbs         = Gibbs(n_clients=args.n_clients, n_receive_ant=args.n_receive_ant, n_RIS_ele=args.n_RIS_ele, Jmax=args.Jmax, K=weight_list, RISON=args.RISON, tau=args.tau, nit=args.nit, threshold=args.threshold)
 
-    #
     air_comp      = AirComp(n_receive_ant=args.n_receive_ant, K=weight_list, transmit_power=args.transmit_power)
-
-    np.random.seed(args.rand_seed)
 
     ###
     # FL system components
@@ -93,8 +89,6 @@ def main():
                                     model=init_model, 
                                     client_param=np.copy(init_par_list)
                                 ) for i in range(args.n_clients)])
-
-    server = Server(algorithm=algorithm)
     ###
 
     if not os.path.exists('Output/%s/%s_init_mdl.pt' %(data_obj.name, args.model_name)):
@@ -218,7 +212,7 @@ def main():
             # fedavg_inputs["h"] = h_optim
             # fedavg_inputs["sigma"] = sigma
             
-        server.aggregate(feddyn_inputs)
+        algorithm.aggregate(feddyn_inputs)
         
         # update the parameters after aggregation
         avg_model = feddyn_inputs["avg_model"]
