@@ -45,5 +45,9 @@ class Algorithm:
         pass
     
     @abstractmethod
+    def _train_model(self):
+        pass
+    
+    @abstractmethod
     def aggregate(self):
         pass

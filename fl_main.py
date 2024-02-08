@@ -8,6 +8,7 @@ import torch
 from air_comp import AirComp
 from algorithm.fedavg import FedAvg
 from algorithm.feddyn import FedDyn
+from algorithm.fedprox import FedProx
 from args import args_parser
 from channel import Channel
 from client import Client
@@ -36,7 +37,8 @@ def main():
     # the weight corresponds to the number of data that the client i has
     # the more data the client has, the larger the weight is
     weight_list   = np.asarray([len(client_y_all[i]) for i in range(args.n_clients)])
-    weight_list   = weight_list / np.sum(weight_list) * args.n_clients  # FedDyn initialization
+    # FedDyn initialization
+    # weight_list   = weight_list / np.sum(weight_list) * args.n_clients
 
     # global parameters
     device        = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -48,8 +50,10 @@ def main():
     init_par_list = get_model_params([init_model])[0] # parameters of the iargs.nitial model
     n_param       = len(init_par_list)
 
-    # FedDyn parameters
+    # FedDyn parameter
     alpha_coef    = 1e-2
+    # FedProx parameter
+    mu = 1e-4
     
     #
     np.random.seed(args.rand_seed)
@@ -77,10 +81,13 @@ def main():
     ###
     # FL system components
 
-    algorithm = FedDyn(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, args.max_norm, air_comp, args.noiseless, args.save_period, args.print_per, alpha_coef)
+    # algorithm = FedDyn(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, args.max_norm, air_comp, args.noiseless, args.save_period, args.print_per, alpha_coef)
 
     # algorithm = FedAvg(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, args.max_norm, air_comp, args.noiseless, args.save_period, args.print_per)
 
+
+    algorithm = FedProx(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, args.max_norm, air_comp, args.noiseless, args.save_period, args.print_per, mu)
+    
     clients_list = np.array([Client(algorithm=algorithm,
                                     device=device, 
                                     weight=weight_list[i], 
@@ -115,7 +122,7 @@ def main():
     all_model = model_func().to(device)
     all_model.load_state_dict(copy.deepcopy(dict(init_model.named_parameters())))
 
-    # cloud (server) model  (for feddyn)
+    # cloud (server) model  (for FedDyn)
     cloud_model = model_func().to(device)
     cloud_model.load_state_dict(copy.deepcopy(dict(init_model.named_parameters())))
     cloud_model_param = get_model_params([cloud_model], n_param)[0]
@@ -155,7 +162,12 @@ def main():
         print("Selected Clients Index: {}".format(x_optim))
         print('Selected Clients: %s' %(', '.join(['%2d' %clnt for clnt in selected_clnts_idx])))
         
+        # FedDyn
         cloud_model_param_tensor = torch.tensor(cloud_model_param, dtype=torch.float32, device=device)
+        
+        # FedProx
+        avg_model_param = get_model_params([avg_model], n_param)[0]
+        avg_model_param_tensor = torch.tensor(avg_model_param, dtype=torch.float32, device=device)
         
         ###
         # partial training
@@ -176,10 +188,16 @@ def main():
                 "avg_model": avg_model,
             }
             
-            client.local_train(feddyn_inputs)
+            fedprox_inputs = {
+                "curr_round": t,
+                "avg_model": avg_model,
+                "avg_model_param_tensor": avg_model_param_tensor
+            }
+            
+            client.local_train(fedprox_inputs)
             
             # update the parameters (For FedDyn)
-            local_param_list[selected_clnts_idx[i]] = feddyn_inputs["local_param"]
+            # local_param_list[selected_clnts_idx[i]] = feddyn_inputs["local_param"]
         
         feddyn_inputs = {
             "clients_list": clients_list,
@@ -198,27 +216,35 @@ def main():
             "avg_model": avg_model,
             "all_model": all_model,
         }
+        
+        fedprox_inputs = {
+            "clients_list": clients_list,
+            "selected_clnts_idx": selected_clnts_idx,
+            "weight_list": weight_list,
+            "avg_model": avg_model,
+            "all_model": all_model,
+        }
         # pass the AirComp optimization parameters
         if not args.noiseless:
-            feddyn_inputs["x"] = x_optim
-            feddyn_inputs["f"] = f_optim
-            feddyn_inputs["h"] = h_optim
-            feddyn_inputs["sigma"] = sigma
+            fedprox_inputs["x"] = x_optim
+            fedprox_inputs["f"] = f_optim
+            fedprox_inputs["h"] = h_optim
+            fedprox_inputs["sigma"] = sigma
             
             # fedavg_inputs["x"] = selected_optim
             # fedavg_inputs["f"] = f_store[:, args.Jmax]
             # fedavg_inputs["h"] = h_optim
             # fedavg_inputs["sigma"] = sigma
             
-        algorithm.aggregate(feddyn_inputs)
+        algorithm.aggregate(fedprox_inputs)
         
         # update the parameters after aggregation
-        avg_model = feddyn_inputs["avg_model"]
-        all_model = feddyn_inputs["all_model"]
+        avg_model = fedprox_inputs["avg_model"]
+        all_model = fedprox_inputs["all_model"]
         
         # For FedDyn
-        cloud_model = feddyn_inputs["cloud_model"]
-        cloud_model_param = feddyn_inputs["cloud_model_param"]
+        # cloud_model = feddyn_inputs["cloud_model"]
+        # cloud_model_param = feddyn_inputs["cloud_model_param"]
 
         # get the test accuracy
         algorithm.evaluate(data_obj, cent_x, cent_y, avg_model, all_model, device, tst_perf_sel, trn_perf_sel, tst_perf_all, trn_perf_all, t)
