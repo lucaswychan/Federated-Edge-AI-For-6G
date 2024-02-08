@@ -2,7 +2,9 @@
 import copy
 
 import numpy as np
-from scipy.optimize import minimize
+# from scipy.optimize import minimize
+import jax.numpy as jnp
+from jax.scipy.optimize import minimize
 
 
 class Gibbs(object):
@@ -184,12 +186,17 @@ class Gibbs(object):
                 else:
                     c[:, i] = np.abs(np.conjugate(f) @ h[:, i]) ** 2 + 2 * self.tau * K2[i]
 
-            fun = lambda mu: np.real(
-                2 * np.linalg.norm(a @ mu) + 2 * np.linalg.norm(b @ mu, ord=1) - c @ mu   # (29)
+            mu = jnp.asarray(mu)
+            a = jnp.asarray(a)
+            b = jnp.asarray(b)
+            c = jnp.asarray(c)
+            K2 = jnp.asarray(K2)
+            fun = lambda mu: jnp.real(
+                2 * jnp.linalg.norm(a @ mu) + 2 * jnp.linalg.norm(b @ mu, ord=1) - c @ mu   # (29)
             )
 
             cons = {"type": "eq", "fun": lambda mu: K2 @ mu - 1}
-            bnds = ((0, None) for i in range(I))
+            bnds = ((0, None) for _ in range(I))
             res = minimize(fun, 1 / K2, bounds=tuple(bnds), constraints=cons)
             if ~res.success:
                 pass
