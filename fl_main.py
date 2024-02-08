@@ -121,7 +121,7 @@ def main():
     cloud_model_param = get_model_params([cloud_model], n_param)[0]
 
     ###
-    # Start Training
+    # Start Communicatoin
     print()
     print("=" * 80)
     print('Device: %s' %device)
@@ -137,24 +137,22 @@ def main():
         
         print("This is the {0}-th trial".format(t+1))
 
+        # generate the channel
         h_d, G, x, sigma = channel.generate()
 
         start = time.time()
-        x_store, obj_new, f_store, theta_store = gibbs.optimize(h_d, G, x, sigma)
+        
+        # get the optimized parameters based on RIS-FL
+        x_optim, f_optim, h_optim = gibbs.optimize(h_d, G, x, sigma)
+        
         end = time.time()
         print("Running time of Gibbs Optimization: {} seconds\n".format(end - start))
         
-        theta_optim = theta_store[:, args.Jmax]
-
-        h_optim = np.zeros([args.n_receive_ant, args.n_clients], dtype=complex)
-        for i in range(args.n_clients):
-            h_optim[:, i] = h_d[:, i] + G[:, :, i] @ theta_optim
-
-        selected_optim = x_store[args.Jmax]
-        selected_clnts_idx = np.where(selected_optim == 1)[0] # get the index of the selected clients
+        # get the selected clients
+        selected_clnts_idx = np.where(x_optim == 1)[0] # get the index of the selected clients
         selected_clnts = clients_list[selected_clnts_idx]
         
-        print("Selected Clients Index: {}".format(x_store[args.Jmax]))
+        print("Selected Clients Index: {}".format(x_optim))
         print('Selected Clients: %s' %(', '.join(['%2d' %clnt for clnt in selected_clnts_idx])))
         
         cloud_model_param_tensor = torch.tensor(cloud_model_param, dtype=torch.float32, device=device)
@@ -202,8 +200,8 @@ def main():
         }
         # pass the AirComp optimization parameters
         if not args.noiseless:
-            feddyn_inputs["x"] = selected_optim
-            feddyn_inputs["f"] = f_store[:, args.Jmax]
+            feddyn_inputs["x"] = x_optim
+            feddyn_inputs["f"] = f_optim
             feddyn_inputs["h"] = h_optim
             feddyn_inputs["sigma"] = sigma
             
