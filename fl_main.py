@@ -9,6 +9,7 @@ from air_comp import AirComp
 from algorithm.fedavg import FedAvg
 from algorithm.feddyn import FedDyn
 from algorithm.fedprox import FedProx
+from algorithm.scaffold import SCAFFOLD
 from args import args_parser
 from channel import Channel
 from client import Client
@@ -38,7 +39,7 @@ def main():
     # the more data the client has, the larger the weight is
     weight_list   = np.asarray([len(client_y_all[i]) for i in range(args.n_clients)])
     # FedDyn initialization
-    # weight_list   = weight_list / np.sum(weight_list) * args.n_clients
+    weight_list   = weight_list / np.sum(weight_list) * args.n_clients
 
     # global parameters
     device        = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -54,6 +55,12 @@ def main():
     alpha_coef    = 1e-2
     # FedProx parameter
     mu = 1e-4
+    # SCAFFOLD parameter
+    n_data_per_client = cent_x.shape[0] / args.n_clients
+    n_iter_per_epoch  = np.ceil(n_data_per_client / args.batch_size)
+    n_minibatch = (args.epoch * n_iter_per_epoch).astype(np.int64)
+    args.print_per = args.print_per * n_iter_per_epoch
+    global_learning_rate = 1
     
     #
     np.random.seed(args.rand_seed)
@@ -85,8 +92,9 @@ def main():
 
     # algorithm = FedAvg(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, args.max_norm, air_comp, args.noiseless, args.save_period, args.print_per)
 
-
-    algorithm = FedProx(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, args.max_norm, air_comp, args.noiseless, args.save_period, args.print_per, mu)
+    # algorithm = FedProx(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, args.max_norm, air_comp, args.noiseless, args.save_period, args.print_per, mu)
+    
+    algorithm = SCAFFOLD(args.act_prob, args.lr, args.lr_decay_per_round, args.batch_size, args.epoch, args.weight_decay, model_func, init_model, data_obj, n_param, args.max_norm, air_comp, args.noiseless, args.save_period, args.print_per, n_minibatch, global_learning_rate)
     
     clients_list = np.array([Client(algorithm=algorithm,
                                     device=device, 
@@ -109,7 +117,11 @@ def main():
     ###
     # Model Initialization (feel free to add new parameters in this section if using this frameworks)
 
-    local_param_list = np.zeros((args.n_clients, n_param)).astype('float32')  # for feddyn
+    # For FedDyn
+    local_param_list = np.zeros((args.n_clients, n_param)).astype('float32')
+    
+    # For SCAFFOLD
+    state_param_list = np.zeros((args.n_clients+1, n_param)).astype('float32') #including cloud state
 
     trn_perf_sel = np.zeros((args.comm_rounds, 2)); trn_perf_all = np.zeros((args.comm_rounds, 2))
     tst_perf_sel = np.zeros((args.comm_rounds, 2)); tst_perf_all = np.zeros((args.comm_rounds, 2))
@@ -163,11 +175,15 @@ def main():
         print('Selected Clients: %s' %(', '.join(['%2d' %clnt for clnt in selected_clnts_idx])))
         
         # FedDyn
-        cloud_model_param_tensor = torch.tensor(cloud_model_param, dtype=torch.float32, device=device)
+        # cloud_model_param_tensor = torch.tensor(cloud_model_param, dtype=torch.float32, device=device)
         
         # FedProx
-        avg_model_param = get_model_params([avg_model], n_param)[0]
-        avg_model_param_tensor = torch.tensor(avg_model_param, dtype=torch.float32, device=device)
+        # avg_model_param = get_model_params([avg_model], n_param)[0]
+        # avg_model_param_tensor = torch.tensor(avg_model_param, dtype=torch.float32, device=device)
+        
+        # SCAFFOLD
+        delta_c_sum = np.zeros(n_param)
+        prev_params = get_model_params([avg_model], n_param)[0]
         
         ###
         # partial training
@@ -175,76 +191,98 @@ def main():
             # Train locally 
             print('---- Training client %d' %selected_clnts_idx[i])
             
-            feddyn_inputs = {
-                "curr_round": t,
-                "cloud_model": cloud_model,
-                "cloud_model_param_tensor": cloud_model_param_tensor,
-                "cloud_model_param": cloud_model_param,
-                "local_param": local_param_list[selected_clnts_idx[i]]
-            }
+            # feddyn_inputs = {
+            #     "curr_round": t,
+            #     "cloud_model": cloud_model,
+            #     "cloud_model_param_tensor": cloud_model_param_tensor,
+            #     "cloud_model_param": cloud_model_param,
+            #     "local_param": local_param_list[selected_clnts_idx[i]]
+            # }
             
-            fedavg_inputs = {
+            # fedavg_inputs = {
+            #     "curr_round": t,
+            #     "avg_model": avg_model,
+            # }
+            
+            # fedprox_inputs = {
+            #     "curr_round": t,
+            #     "avg_model": avg_model,
+            #     "avg_model_param_tensor": avg_model_param_tensor
+            # }
+            
+            scaffold_inputs = {
                 "curr_round": t,
                 "avg_model": avg_model,
+                "state_param": state_param_list[selected_clnts_idx[i]],
+                "general_state_param": state_param_list[-1],
+                "prev_params": prev_params,
+                "delta_c_sum": delta_c_sum
             }
             
-            fedprox_inputs = {
-                "curr_round": t,
-                "avg_model": avg_model,
-                "avg_model_param_tensor": avg_model_param_tensor
-            }
-            
-            client.local_train(fedprox_inputs)
+            client.local_train(scaffold_inputs)
             
             # update the parameters (For FedDyn)
             # local_param_list[selected_clnts_idx[i]] = feddyn_inputs["local_param"]
+            
+            # update the parameters (For SCAFFOLD)
+            delta_c_sum = scaffold_inputs["delta_c_sum"]
+            state_param_list[selected_clnts_idx[i]] = scaffold_inputs["state_param"]
         
-        feddyn_inputs = {
-            "clients_list": clients_list,
-            "selected_clnts_idx": selected_clnts_idx,
-            "local_param_list": local_param_list,
-            "avg_model": avg_model,
-            "all_model": all_model,
-            "cloud_model": cloud_model,
-            "cloud_model_param": cloud_model_param,
-        }
+        # feddyn_inputs = {
+        #     "clients_list": clients_list,
+        #     "selected_clnts_idx": selected_clnts_idx,
+        #     "local_param_list": local_param_list,
+        #     "avg_model": avg_model,
+        #     "all_model": all_model,
+        #     "cloud_model": cloud_model,
+        #     "cloud_model_param": cloud_model_param,
+        # }
         
-        fedavg_inputs = {
+        # fedavg_inputs = {
+        #     "clients_list": clients_list,
+        #     "selected_clnts_idx": selected_clnts_idx,
+        #     "weight_list": weight_list,
+        #     "avg_model": avg_model,
+        #     "all_model": all_model,
+        # }
+        
+        # fedprox_inputs = {
+        #     "clients_list": clients_list,
+        #     "selected_clnts_idx": selected_clnts_idx,
+        #     "weight_list": weight_list,
+        #     "avg_model": avg_model,
+        #     "all_model": all_model,
+        # }
+        
+        scaffold_inputs = {
             "clients_list": clients_list,
             "selected_clnts_idx": selected_clnts_idx,
             "weight_list": weight_list,
             "avg_model": avg_model,
             "all_model": all_model,
-        }
-        
-        fedprox_inputs = {
-            "clients_list": clients_list,
-            "selected_clnts_idx": selected_clnts_idx,
-            "weight_list": weight_list,
-            "avg_model": avg_model,
-            "all_model": all_model,
+            "prev_params": prev_params,
+            "delta_c_sum": delta_c_sum,
+            "general_state_param": state_param_list[-1]
         }
         # pass the AirComp optimization parameters
         if not args.noiseless:
-            fedprox_inputs["x"] = x_optim
-            fedprox_inputs["f"] = f_optim
-            fedprox_inputs["h"] = h_optim
-            fedprox_inputs["sigma"] = sigma
+            scaffold_inputs["x"] = x_optim
+            scaffold_inputs["f"] = f_optim
+            scaffold_inputs["h"] = h_optim
+            scaffold_inputs["sigma"] = sigma
             
-            # fedavg_inputs["x"] = selected_optim
-            # fedavg_inputs["f"] = f_store[:, args.Jmax]
-            # fedavg_inputs["h"] = h_optim
-            # fedavg_inputs["sigma"] = sigma
-            
-        algorithm.aggregate(fedprox_inputs)
+        algorithm.aggregate(scaffold_inputs)
         
         # update the parameters after aggregation
-        avg_model = fedprox_inputs["avg_model"]
-        all_model = fedprox_inputs["all_model"]
+        avg_model = scaffold_inputs["avg_model"]
+        all_model = scaffold_inputs["all_model"]
         
         # For FedDyn
         # cloud_model = feddyn_inputs["cloud_model"]
         # cloud_model_param = feddyn_inputs["cloud_model_param"]
+        
+        # For SCAFFOLD
+        state_param_list[-1] = scaffold_inputs["general_state_param"]
 
         # get the test accuracy
         algorithm.evaluate(data_obj, cent_x, cent_y, avg_model, all_model, device, tst_perf_sel, trn_perf_sel, tst_perf_all, trn_perf_all, t)

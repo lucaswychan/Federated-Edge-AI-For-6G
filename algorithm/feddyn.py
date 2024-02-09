@@ -39,6 +39,7 @@ class FedDyn(Algorithm):
 
         # No need to scale up hist terms. They are -\nabla/alpha and alpha is already scaled.
         inputs["local_param"] += curr_model_par - inputs["cloud_model_param"]  # after training, dynamically update the weight with the cloud model parameters
+        
         client.client_param = curr_model_par
     
     
@@ -109,6 +110,7 @@ class FedDyn(Algorithm):
         selected_clnts_idx = inputs["selected_clnts_idx"]
         
         all_clients_param_list = np.array([client.client_param for client in clients_list])
+        
         avg_mdl_param = None
         if not self.noiseless:
             print("\nStart AirComp Transmission")
