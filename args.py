@@ -13,7 +13,7 @@ def args_parser():
     
     parser.add_argument('--act_prob', type=float, default=0.6, help="probability of active clients")
     
-    parser.add_argument('--lr_decay_per_round', type=float, default=1, help="learning rate decay per round")
+    parser.add_argument('--lr_decay_per_round', type=float, default=0.99, help="learning rate decay per round")
     
     parser.add_argument('--batch_size', type=int, default=50, help="batch size")
     
@@ -25,7 +25,7 @@ def args_parser():
     
     parser.add_argument('--model_name', type=str, default='cifar10', help="model name")
     
-    parser.add_argument('--rand_seed', type=int, default=1, help="random seed")
+    parser.add_argument('--rand_seed', type=int, default=1, help="r andom seed")
     
     parser.add_argument('--save_period', type=int, default=1, help="save period")
     
