@@ -5,6 +5,8 @@ def args_parser():
     parser = argparse.ArgumentParser()
 
     # FedDyn setup
+    parser.add_argument('--algorithm_name', type=str, default='FedDyn', help="algorithm name")
+    
     parser.add_argument('--n_clients', type=int, default=30, help="number of clients")
     
     parser.add_argument('--comm_rounds', type=int, default=50, help="number of communication rounds")
@@ -30,6 +32,7 @@ def args_parser():
     parser.add_argument('--save_period', type=int, default=1, help="save period")
     
     parser.add_argument('--print_per', type=int, default=5, help="print period")
+    
     
     
     # RIS FL setup
