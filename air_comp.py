@@ -13,11 +13,10 @@ class AirComp(object):
         index = x == 1
         N = self.n_receive_ant
         K = self.K[index]  # K_m
-        K2 = K**2   # K_m^2
-
+        K2 = K**2  # K_m^2
 
         inner = f.conj() @ h[:, index]  # fH h_m(theta)
-        inner2 = np.abs(inner) ** 2 # fH h_m(theta) ^ 2
+        inner2 = np.abs(inner) ** 2  # fH h_m(theta) ^ 2
 
         g = signal
         # mean and variance
@@ -28,9 +27,9 @@ class AirComp(object):
         # var[var < 1e-3] = 1e-3
         var_sqrt = var**0.5
 
-        eta = np.min(self.transmit_power * inner2 / K2 / var) # from (17)
+        eta = np.min(self.transmit_power * inner2 / K2 / var)  # from (17)
         eta_sqrt = eta**0.5
-        b = K * eta_sqrt * var_sqrt * inner.conj() / inner2 # from (17) p_m
+        b = K * eta_sqrt * var_sqrt * inner.conj() / inner2  # from (17) p_m
 
         noise_power = sigma * self.transmit_power
 
@@ -42,6 +41,8 @@ class AirComp(object):
 
         x_signal = np.tile(b / var_sqrt, (d, 1)).T * (g - np.tile(mean, (d, 1)).T)
         y = h[:, index] @ x_signal + n
-        w = np.real((f.conj() @ y / eta_sqrt + g_bar)) / np.sum(K)   # delete to divide by sum(K) as it is not necessary  # (11)
+        w = np.real((f.conj() @ y / eta_sqrt + g_bar)) / np.sum(
+            K
+        )  # delete to divide by sum(K) as it is not necessary  # (11)
 
         return w

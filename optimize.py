@@ -6,39 +6,41 @@ from scipy.optimize import minimize
 
 
 class Gibbs(object):
-    def __init__(self, n_clients, n_receive_ant, n_RIS_ele, Jmax, K, RISON, tau, nit, threshold):
+    def __init__(
+        self, n_clients, n_receive_ant, n_RIS_ele, Jmax, K, RISON, tau, nit, threshold
+    ):
         self.n_clients = n_clients
         self.n_receive_ant = n_receive_ant
         self.n_RIS_ele = n_RIS_ele
         self.Jmax = Jmax
         self.K = K
         self.RISON = RISON
-        
+
         # for sca_fmincon
         self.tau = tau
         self.nit = nit
         self.threshold = threshold
-        
+
     def optimize(self, h_d, G, x0, sigma):
         x_store, obj_new, f_store, theta_store = self.sampling(h_d, G, x0, sigma)
-        
+
         x_optim = x_store[self.Jmax]
-        
+
         f_optim = f_store[:, self.Jmax]
 
         theta_optim = theta_store[:, self.Jmax]
         h_optim = np.zeros([self.n_receive_ant, self.n_clients], dtype=complex)
         for i in range(self.n_clients):
             h_optim[:, i] = h_d[:, i] + G[:, :, i] @ theta_optim
-          
+
         return x_optim, f_optim, h_optim
-        
+
     # Algorithm 2
     def sampling(self, h_d, G, x0, sigma):
         N = self.n_receive_ant
         L = self.n_RIS_ele
         M = self.n_clients
-        
+
         K = self.K / np.mean(self.K)  # normalize K to speed up floating computation
         K2 = K**2
         Ksum2 = sum(K) ** 2
@@ -64,7 +66,7 @@ class Gibbs(object):
         theta_loop = np.tile(theta, (M + 1, 1))
 
         for j in range(self.Jmax):
-            
+
             # store the possible transition solution and their objectives
             X_sample = np.zeros([M + 1, M], dtype=int)
             Temp = np.zeros(M + 1)
@@ -113,12 +115,12 @@ class Gibbs(object):
             beta = max(alpha * beta, 1e-4)
 
         return x_store, obj_new, f_store, theta_store
-    
+
     def find_obj_inner(self, x, K, K2, Ksum2, h_d, G, f0, theta0, sigma):
         N = self.n_receive_ant
         L = self.n_RIS_ele
         M = self.n_clients
-        
+
         if sum(x) == 0:
             obj = np.inf
 
@@ -128,7 +130,7 @@ class Gibbs(object):
                 theta = np.zeros([L])
         else:
             index = x == 1
-            
+
             f, theta, _ = self.sca_fmincon(
                 h_d[:, index], G[:, :, index], f0, theta0, x, K2[index]
             )
@@ -142,13 +144,13 @@ class Gibbs(object):
                 + 4 / Ksum2 * (sum(K[~index])) ** 2
             )
         return obj, x, f, theta
-    
+
     # Algorithm 1
-    def sca_fmincon(self, h_d, G, f, theta, x, K2):   # (25)
+    def sca_fmincon(self, h_d, G, f, theta, x, K2):  # (25)
         N = self.n_receive_ant
         L = self.n_RIS_ele
         I = sum(x)
-        
+
         if theta is None:
             theta = np.ones([L], dtype=complex)
         if not self.RISON:
@@ -169,10 +171,14 @@ class Gibbs(object):
             b = np.zeros([L, I], dtype=complex)
             c = np.zeros([1, I], dtype=complex)
             F_cro = np.outer(f, np.conjugate(f))
-            for i in range(I): # (26)
-                a[:, i] = self.tau * K2[i] * f + np.outer(h[:, i], np.conjugate(h[:, i])) @ f
+            for i in range(I):  # (26)
+                a[:, i] = (
+                    self.tau * K2[i] * f + np.outer(h[:, i], np.conjugate(h[:, i])) @ f
+                )
                 if self.RISON:
-                    b[:, i] = self.tau * K2[i] * theta + G[:, :, i].conj().T @ F_cro @ h[:, i]
+                    b[:, i] = (
+                        self.tau * K2[i] * theta + G[:, :, i].conj().T @ F_cro @ h[:, i]
+                    )
                     c[:, i] = (
                         np.abs(np.conjugate(f) @ h[:, i]) ** 2
                         + 2 * self.tau * K2[i] * (L + 1)
@@ -182,10 +188,14 @@ class Gibbs(object):
                         )
                     )
                 else:
-                    c[:, i] = np.abs(np.conjugate(f) @ h[:, i]) ** 2 + 2 * self.tau * K2[i]
+                    c[:, i] = (
+                        np.abs(np.conjugate(f) @ h[:, i]) ** 2 + 2 * self.tau * K2[i]
+                    )
 
             fun = lambda mu: np.real(
-                2 * np.linalg.norm(a @ mu) + 2 * np.linalg.norm(b @ mu, ord=1) - c @ mu   # (29)
+                2 * np.linalg.norm(a @ mu)
+                + 2 * np.linalg.norm(b @ mu, ord=1)
+                - c @ mu  # (29)
             )
 
             cons = {"type": "eq", "fun": lambda mu: K2 @ mu - 1}
@@ -204,7 +214,7 @@ class Gibbs(object):
             f = fn
             for i in range(I):
                 h[:, i] = h_d[:, i] + G[:, :, i] @ theta
-            obj = min(np.abs(np.conjugate(f) @ h) ** 2 / K2)   # (24)
+            obj = min(np.abs(np.conjugate(f) @ h) ** 2 / K2)  # (24)
             result[it] = copy.deepcopy(obj)
 
             if np.abs(obj - obj_pre) / min(1, abs(obj)) <= self.threshold:
