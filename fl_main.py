@@ -12,8 +12,8 @@ from channel import Channel
 from client import Client
 from dataset import DatasetObject
 from model import Model
-from optimize import *
-from utils import *
+from optimize import Gibbs
+from utils import get_model_params, save_performance
 
 
 def main():
@@ -196,32 +196,41 @@ def main():
     for t in range(args.comm_rounds):
 
         print("This is the {0}-th trial".format(t + 1))
-
+        
         ############################################################################################################
-        # generate the channel
+        
+        if not args.noiseless:
+            print("\nRunning Gibbs Optimization...\n")
+            # generate the channel
+            h_d, G, x, sigma = channel.generate()
 
-        h_d, G, x, sigma = channel.generate()
+            start = time.time()
 
-        start = time.time()
+            # get the optimized parameters based on RIS-FL
+            x_optim, f_optim, h_optim = gibbs.optimize(h_d, G, x, sigma)
 
-        # get the optimized parameters based on RIS-FL
-        x_optim, f_optim, h_optim = gibbs.optimize(h_d, G, x, sigma)
-
-        end = time.time()
-        print("Running time of Gibbs Optimization: {} seconds\n".format(end - start))
+            end = time.time()
+            print("Running time of Gibbs Optimization: {} seconds\n".format(end - start))
+        
+        else:
+            print("\nRunning Random Selection...\n")
+            inc_seed = 0
+            x_optim = np.array([0])
+            while np.sum(x_optim) == 0:
+                # Fix randomness in client selection
+                np.random.seed(t + args.rand_seed + inc_seed)
+                active_clients = np.random.uniform(size=args.n_clients)
+                x_optim = active_clients <= args.act_prob
+                inc_seed += 1
+                
         ############################################################################################################
         # get the selected clients
 
-        selected_clnts_idx = np.where(x_optim == 1)[
-            0
-        ]  # get the index of the selected clients
+        selected_clnts_idx = np.where(x_optim == 1)[0]  # get the index of the selected clients
         selected_clnts = clients_list[selected_clnts_idx]
 
         print("Selected Clients Index: {}".format(x_optim))
-        print(
-            "Selected Clients: %s\n"
-            % (", ".join(["%2d" % clnt for clnt in selected_clnts_idx]))
-        )
+        print("Selected Clients: %s\n" % (", ".join(["%2d" % clnt for clnt in selected_clnts_idx])))
 
         ############################################################################################################
         # set up the required parameters for the algorithms
