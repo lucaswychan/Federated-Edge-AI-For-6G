@@ -13,7 +13,7 @@ def args_parser():
     
     parser.add_argument('--lr', type=float, default=0.03, help="learning rate")
     
-    parser.add_argument('--act_prob', type=float, default=0.6, help="probability of active clients")
+    parser.add_argument('--act_prob', type=float, default=0.9, help="probability of active clients")
     
     parser.add_argument('--lr_decay_per_round', type=float, default=0.99, help="learning rate decay per round")
     
