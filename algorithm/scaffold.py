@@ -10,63 +10,120 @@ from utils import *
 
 
 class SCAFFOLD(Algorithm):
-    def __init__(self, act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, max_norm, air_comp, noiseless, save_period, print_per, n_minibatch, global_learning_rate):
-        super().__init__("SCAFFOLD", act_prob, lr, lr_decay_per_round, batch_size, epoch, weight_decay, model_func, init_model, data_obj, n_param, max_norm, air_comp, noiseless, save_period, print_per)
-        
+    def __init__(
+        self,
+        act_prob,
+        lr,
+        lr_decay_per_round,
+        batch_size,
+        epoch,
+        weight_decay,
+        model_func,
+        init_model,
+        data_obj,
+        n_param,
+        max_norm,
+        air_comp,
+        noiseless,
+        save_period,
+        print_per,
+        n_minibatch,
+        global_learning_rate,
+    ):
+        super().__init__(
+            "SCAFFOLD",
+            act_prob,
+            lr,
+            lr_decay_per_round,
+            batch_size,
+            epoch,
+            weight_decay,
+            model_func,
+            init_model,
+            data_obj,
+            n_param,
+            max_norm,
+            air_comp,
+            noiseless,
+            save_period,
+            print_per,
+        )
+
         self.n_minibatch = n_minibatch
         self.global_learning_rate = global_learning_rate
-        
+
     # override
     def local_train(self, client: Client, inputs: dict):
         trn_x = client.train_data_X
         trn_y = client.train_data_Y
         self.device = client.device
-        
+
         client.model = self.model_func().to(self.device)
-        client.model.load_state_dict(copy.deepcopy(dict(inputs["avg_model"].named_parameters())))
+        client.model.load_state_dict(
+            copy.deepcopy(dict(inputs["avg_model"].named_parameters()))
+        )
 
         for params in client.model.parameters():
             params.requires_grad = True
-            
+
         # Scale down c
-        state_params_diff_curr = torch.tensor(-inputs["state_param"] + inputs["general_state_param"] / client.weight, dtype=torch.float32, device=self.device)
+        state_params_diff_curr = torch.tensor(
+            -inputs["state_param"] + inputs["general_state_param"] / client.weight,
+            dtype=torch.float32,
+            device=self.device,
+        )
         print("state_params_diff_curr = ", state_params_diff_curr)
-        client.model = self._train_model(client.model, trn_x, trn_y, inputs["curr_round"], state_params_diff_curr)
-        
-        curr_model_par = get_model_params([client.model], self.n_param)[0] # get the model parameter after running SCAFFOLD
+        client.model = self._train_model(
+            client.model, trn_x, trn_y, inputs["curr_round"], state_params_diff_curr
+        )
+
+        curr_model_par = get_model_params([client.model], self.n_param)[
+            0
+        ]  # get the model parameter after running SCAFFOLD
         print("curr_model_par = ", curr_model_par)
-        
-        new_c = inputs["state_param"] - inputs["general_state_param"] + 1 / self.n_minibatch / self.lr * (inputs["prev_params"] - curr_model_par)
+
+        new_c = (
+            inputs["state_param"]
+            - inputs["general_state_param"]
+            + 1 / self.n_minibatch / self.lr * (inputs["prev_params"] - curr_model_par)
+        )
         # Scale up delta c
         inputs["delta_c_sum"] += (new_c - inputs["state_param"]) * client.weight
         inputs["state_param"] = new_c
-        
+
         client.client_param = curr_model_par
-    
-    
+
     def _train_model(self, model, trn_x, trn_y, curr_round, state_params_diff):
-        decayed_lr = self.lr * (self.lr_decay_per_round ** curr_round)
+        decayed_lr = self.lr * (self.lr_decay_per_round**curr_round)
         dataset_name = self.data_obj.dataset
-        
+
         n_trn = trn_x.shape[0]
-        trn_gen = data.DataLoader(Dataset(trn_x, trn_y, train=True, dataset_name=dataset_name), batch_size=self.batch_size, shuffle=True)
+        trn_gen = data.DataLoader(
+            Dataset(trn_x, trn_y, train=True, dataset_name=dataset_name),
+            batch_size=self.batch_size,
+            shuffle=True,
+        )
         loss_fn = torch.nn.CrossEntropyLoss(reduction="sum")
-        
-        optimizer = torch.optim.SGD(model.parameters(), lr=decayed_lr, weight_decay=self.weight_decay)
-        model.train(); model = model.to(self.device)
- 
-        n_iter_per_epoch = int(np.ceil(n_trn/self.batch_size))
+
+        optimizer = torch.optim.SGD(
+            model.parameters(), lr=decayed_lr, weight_decay=self.weight_decay
+        )
+        model.train()
+        model = model.to(self.device)
+
+        n_iter_per_epoch = int(np.ceil(n_trn / self.batch_size))
         self.epoch = np.ceil(self.n_minibatch / n_iter_per_epoch).astype(np.int64)
         count_step = 0
         is_done = False
-        
-        step_loss = 0; n_data_step = 0
+
+        step_loss = 0
+        n_data_step = 0
         for e in range(self.epoch):
             # Training
             if is_done:
                 break
             trn_gen_iter = trn_gen.__iter__()
-            for _ in range(int(np.ceil(n_trn/self.batch_size))):
+            for _ in range(int(np.ceil(n_trn / self.batch_size))):
                 count_step += 1
                 if count_step > self.n_minibatch:
                     is_done = True
@@ -74,68 +131,93 @@ class SCAFFOLD(Algorithm):
                 batch_x, batch_y = trn_gen_iter.__next__()
                 batch_x = batch_x.to(self.device)
                 batch_y = batch_y.to(self.device)
-                
+
                 y_pred = model(batch_x)
-                
-                ## Get f_i estimate 
+
+                ## Get f_i estimate
                 loss_f_i = loss_fn(y_pred, batch_y.reshape(-1).long())
                 loss_f_i = loss_f_i / list(batch_y.size())[0]
-                
+
                 # Get linear penalty on the current parameter estimates
                 local_par_list = None
                 for param in model.parameters():
                     if not isinstance(local_par_list, torch.Tensor):
-                    # Initially nothing to concatenate
+                        # Initially nothing to concatenate
                         local_par_list = param.reshape(-1)
                     else:
-                        local_par_list = torch.cat((local_par_list, param.reshape(-1)), 0)
-                
+                        local_par_list = torch.cat(
+                            (local_par_list, param.reshape(-1)), 0
+                        )
+
                 loss_algo = torch.sum(local_par_list * state_params_diff)
                 loss = loss_f_i + loss_algo
 
                 optimizer.zero_grad()
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=self.max_norm) # Clip gradients
+                torch.nn.utils.clip_grad_norm_(
+                    parameters=model.parameters(), max_norm=self.max_norm
+                )  # Clip gradients
                 optimizer.step()
-                step_loss += loss.item() * list(batch_y.size())[0]; n_data_step += list(batch_y.size())[0]
+                step_loss += loss.item() * list(batch_y.size())[0]
+                n_data_step += list(batch_y.size())[0]
 
                 if (count_step) % self.print_per == 0:
                     step_loss /= n_data_step
                     if self.weight_decay != None:
                         # Add L2 loss to complete f_i
                         params = get_model_params([model], self.n_param)
-                        step_loss += (self.weight_decay)/2 * np.sum(params * params)
-                    print("Step %3d, Training Loss: %.4f" %(count_step, step_loss))
-                    step_loss = 0; n_data_step = 0
+                        step_loss += (self.weight_decay) / 2 * np.sum(params * params)
+                    print("Step %3d, Training Loss: %.4f" % (count_step, step_loss))
+                    step_loss = 0
+                    n_data_step = 0
                     model.train()
-        
+
         # Freeze model
         for params in model.parameters():
             params.requires_grad = False
         model.eval()
-                
+
         return model
-    
-    
+
     # override
     def aggregate(self, inputs: dict):
         clients_list = inputs["clients_list"]
         selected_clnts_idx = inputs["selected_clnts_idx"]
-        
-        all_clients_param_list = np.array([client.client_param for client in clients_list])
+
+        all_clients_param_list = np.array(
+            [client.client_param for client in clients_list]
+        )
         n_clients = len(clients_list)
-        
+
         avg_mdl_param = None
         if not self.noiseless:
             print("\nStart AirComp Transmission")
-            avg_mdl_param = self.air_comp.transmission(self.n_param, all_clients_param_list[selected_clnts_idx], inputs["x"], inputs["f"], inputs["h"], inputs["sigma"])
-            avg_mdl_param = self.global_learning_rate * avg_mdl_param + (1 - self.global_learning_rate) * inputs["prev_params"]
+            avg_mdl_param = self.air_comp.transmission(
+                self.n_param,
+                all_clients_param_list[selected_clnts_idx],
+                inputs["x"],
+                inputs["f"],
+                inputs["h"],
+                inputs["sigma"],
+            )
+            avg_mdl_param = (
+                self.global_learning_rate * avg_mdl_param
+                + (1 - self.global_learning_rate) * inputs["prev_params"]
+            )
         else:
-            avg_mdl_param = self.global_learning_rate * np.mean(all_clients_param_list[selected_clnts_idx], axis = 0) + (1 - self.global_learning_rate) * inputs["prev_params"]
-        
+            avg_mdl_param = (
+                self.global_learning_rate
+                * np.mean(all_clients_param_list[selected_clnts_idx], axis=0)
+                + (1 - self.global_learning_rate) * inputs["prev_params"]
+            )
+
         inputs["general_state_param"] += 1 / n_clients * inputs["delta_c_sum"]
-        
+
         device = clients_list[0].device
 
-        inputs["avg_model"] = set_model(self.model_func().to(device), avg_mdl_param, device)
-        inputs["all_model"] = set_model(self.model_func(), np.mean(all_clients_param_list, axis = 0), device)
+        inputs["avg_model"] = set_model(
+            self.model_func().to(device), avg_mdl_param, device
+        )
+        inputs["all_model"] = set_model(
+            self.model_func(), np.mean(all_clients_param_list, axis=0), device
+        )
