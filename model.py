@@ -26,7 +26,7 @@ class Model(nn.Module):
             self.fc2 = nn.Linear(100, 100)
             self.fc3 = nn.Linear(100, self.n_cls)
 
-        if self.name == "cifar10":
+        if self.name == "CIFAR10":
             self.n_cls = 10
             self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=5)
             self.conv2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=5)
@@ -35,7 +35,7 @@ class Model(nn.Module):
             self.fc2 = nn.Linear(384, 192)
             self.fc3 = nn.Linear(192, self.n_cls)
 
-        if self.name == "cifar100":
+        if self.name == "CIFAR100":
             self.n_cls = 100
             self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=5)
             self.conv2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=5)
@@ -114,7 +114,7 @@ class Model(nn.Module):
             x = F.relu(self.fc2(x))
             x = self.fc3(x)
 
-        if self.name == "cifar10":
+        if self.name == "CIFAR10":
             x = self.pool(F.relu(self.conv1(x)))
             x = self.pool(F.relu(self.conv2(x)))
             x = x.view(-1, 64 * 5 * 5)
@@ -122,7 +122,7 @@ class Model(nn.Module):
             x = F.relu(self.fc2(x))
             x = self.fc3(x)
 
-        if self.name == "cifar100":
+        if self.name == "CIFAR100":
             x = self.pool(F.relu(self.conv1(x)))
             x = self.pool(F.relu(self.conv2(x)))
             x = x.view(-1, 64 * 5 * 5)
