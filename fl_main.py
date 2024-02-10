@@ -22,16 +22,16 @@ def main():
 
     ############################################################################################################
     # data for train and test
-    storage_path = "LEAF/shakespeare/data/"
-    # data_obj =  DatasetObject(dataset='CIFAR10', n_client=args.n_clients, unbalanced_sgm=0, rule='Dirichlet', rule_arg=0.6)
-    data_obj = DatasetObject(
-        dataset="CIFAR10", n_client=args.n_clients, rule="iid", unbalanced_sgm=0
-    )
+    # data_obj = ShakespeareObjectCrop_noniid(storage_path, dataset_prefix)
+    unbalanced_sgm = 0
+    if args.rule == "Dirichlet":
+        unbalanced_sgm = 1.0
+    data_obj =  DatasetObject(dataset=args.model_name, n_client=args.n_clients, unbalanced_sgm=unbalanced_sgm, rule=args.rule, rule_arg=0.6)
+    # data_obj = DatasetObject(dataset="CIFAR10", n_client=args.n_clients, rule="iid", unbalanced_sgm=0)
     client_x_all = data_obj.clnt_x
     client_y_all = data_obj.clnt_y
     cent_x = np.concatenate(client_x_all, axis=0)
     cent_y = np.concatenate(client_y_all, axis=0)
-    dataset = data_obj.dataset
 
     ############################################################################################################
 
@@ -45,16 +45,12 @@ def main():
     # global parameters
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    # algorithm parameters
     model_func = lambda: Model(args.model_name)
     init_model = model_func()
 
-    init_par_list = get_model_params([init_model])[
-        0
-    ]  # parameters of the iargs.nitial model
+    init_par_list = get_model_params([init_model])[0]  # parameters of the iargs.nitial model
     n_param = len(init_par_list)
 
-    #
     np.random.seed(args.rand_seed)
 
     ############################################################################################################
@@ -189,6 +185,7 @@ def main():
     print("Epochs: %d" % args.epoch)
     print("Number of clients: %d" % args.n_clients)
     print("Number of communication rounds: %d" % args.comm_rounds)
+    print("Data partition: %s" % args.rule)
     print("Training starts with algorithm: %s\n" % algorithm.name)
     print("The system is {}".format("noiseless" if args.noiseless else "noisy"))
     print("=" * 80, end="\n\n")
