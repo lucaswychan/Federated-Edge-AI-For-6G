@@ -219,6 +219,7 @@ def main():
                 active_clients = np.random.uniform(size=args.n_clients)
                 x_optim = active_clients <= args.act_prob
                 inc_seed += 1
+            x_optim = x_optim.astype(np.int8)
                 
         ############################################################################################################
         # get the selected clients
@@ -333,7 +334,6 @@ def main():
 
         # get the test accuracy
         algorithm.evaluate(
-            data_obj,
             cent_x,
             cent_y,
             avg_model,
