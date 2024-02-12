@@ -13,19 +13,17 @@ class AlgorithmFactory:
 
     def create_algorithm(self, algorithm_name) -> Algorithm:
         algorithm = None
-        # FedDyn parameter
+
         if algorithm_name == "FedDyn":
             alpha_coef = 1e-2
 
             algorithm = FedDyn(
-                self.args.act_prob,
                 self.args.lr,
                 self.args.lr_decay_per_round,
                 self.args.batch_size,
                 self.args.epoch,
                 self.args.weight_decay,
                 self.args.model_func,
-                self.args.init_model,
                 self.args.data_obj,
                 self.args.n_param,
                 self.args.max_norm,
@@ -36,19 +34,16 @@ class AlgorithmFactory:
                 alpha_coef,
             )
 
-        # FedProx parameter
         elif algorithm_name == "FedProx":
             mu = 1e-4
 
             algorithm = FedProx(
-                self.args.act_prob,
                 self.args.lr,
                 self.args.lr_decay_per_round,
                 self.args.batch_size,
                 self.args.epoch,
                 self.args.weight_decay,
                 self.args.model_func,
-                self.args.init_model,
                 self.args.data_obj,
                 self.args.n_param,
                 self.args.max_norm,
@@ -59,7 +54,6 @@ class AlgorithmFactory:
                 mu,
             )
 
-        # SCAFFOLD parameter
         elif algorithm_name == "SCAFFOLD":
             n_data_per_client = (
                 np.concatenate(self.args.data_obj.clnt_x, axis=0).shape[0]
@@ -71,14 +65,12 @@ class AlgorithmFactory:
             global_learning_rate = 1
 
             algorithm = SCAFFOLD(
-                self.args.act_prob,
                 self.args.lr,
                 self.args.lr_decay_per_round,
                 self.args.batch_size,
                 self.args.epoch,
                 self.args.weight_decay,
                 self.args.model_func,
-                self.args.init_model,
                 self.args.data_obj,
                 self.args.n_param,
                 self.args.max_norm,
@@ -92,14 +84,12 @@ class AlgorithmFactory:
 
         elif algorithm_name == "FedAvg":
             algorithm = FedAvg(
-                self.args.act_prob,
                 self.args.lr,
                 self.args.lr_decay_per_round,
                 self.args.batch_size,
                 self.args.epoch,
                 self.args.weight_decay,
                 self.args.model_func,
-                self.args.init_model,
                 self.args.data_obj,
                 self.args.n_param,
                 self.args.max_norm,

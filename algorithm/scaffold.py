@@ -12,14 +12,12 @@ from utils import *
 class SCAFFOLD(Algorithm):
     def __init__(
         self,
-        act_prob,
         lr,
         lr_decay_per_round,
         batch_size,
         epoch,
         weight_decay,
         model_func,
-        init_model,
         data_obj,
         n_param,
         max_norm,
@@ -32,14 +30,12 @@ class SCAFFOLD(Algorithm):
     ):
         super().__init__(
             "SCAFFOLD",
-            act_prob,
             lr,
             lr_decay_per_round,
             batch_size,
             epoch,
             weight_decay,
             model_func,
-            init_model,
             data_obj,
             n_param,
             max_norm,

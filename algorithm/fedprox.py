@@ -12,14 +12,12 @@ from utils import *
 class FedProx(Algorithm):
     def __init__(
         self,
-        act_prob,
         lr,
         lr_decay_per_round,
         batch_size,
         epoch,
         weight_decay,
         model_func,
-        init_model,
         data_obj,
         n_param,
         max_norm,
@@ -31,14 +29,12 @@ class FedProx(Algorithm):
     ):
         super().__init__(
             "FedProx",
-            act_prob,
             lr,
             lr_decay_per_round,
             batch_size,
             epoch,
             weight_decay,
             model_func,
-            init_model,
             data_obj,
             n_param,
             max_norm,
