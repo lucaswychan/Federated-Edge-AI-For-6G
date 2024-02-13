@@ -105,7 +105,7 @@ class FedAvg(Algorithm):
 
             if (e + 1) % self.print_per == 0:
                 loss_trn, acc_trn = get_acc_loss(
-                    trn_x, trn_y, model, dataset_name, self.weight_decay
+                    trn_x, trn_y, model, self.dataset_name, self.weight_decay
                 )
                 print(
                     "Epoch %3d, Training Accuracy: %.4f, Loss: %.4f"
