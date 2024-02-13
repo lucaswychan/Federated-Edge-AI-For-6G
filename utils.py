@@ -131,3 +131,47 @@ def save_performance(
         ),
         tst_perf_all,
     )
+
+
+def evaluate_performance(
+    cent_x,
+    cent_y,
+    tst_x,
+    tst_y,
+    dataset_name,
+    avg_model,
+    all_model,
+    device,
+    tst_perf_sel,
+    trn_perf_sel,
+    tst_perf_all,
+    trn_perf_all,
+    t,
+):
+    loss_tst, acc_tst = get_acc_loss(tst_x, tst_y, avg_model, dataset_name, device)
+    tst_perf_sel[t] = [loss_tst, acc_tst]
+    print(
+        "\n**** Communication sel %3d, Test Accuracy: %.4f, Loss: %.4f"
+        % (t + 1, acc_tst, loss_tst)
+    )
+
+    loss_tst, acc_tst = get_acc_loss(cent_x, cent_y, avg_model, dataset_name, device)
+    trn_perf_sel[t] = [loss_tst, acc_tst]
+    print(
+        "**** Communication sel %3d, Cent Accuracy: %.4f, Loss: %.4f"
+        % (t + 1, acc_tst, loss_tst)
+    )
+
+    loss_tst, acc_tst = get_acc_loss(tst_x, tst_y, all_model, dataset_name, device)
+    tst_perf_all[t] = [loss_tst, acc_tst]
+    print(
+        "**** Communication all %3d, Test Accuracy: %.4f, Loss: %.4f"
+        % (t + 1, acc_tst, loss_tst)
+    )
+
+    loss_tst, acc_tst = get_acc_loss(cent_x, cent_y, all_model, dataset_name, device)
+    trn_perf_all[t] = [loss_tst, acc_tst]
+    print(
+        "**** Communication all %3d, Cent Accuracy: %.4f, Loss: %.4f\n"
+        % (t + 1, acc_tst, loss_tst)
+    )

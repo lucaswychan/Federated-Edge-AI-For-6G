@@ -6,6 +6,7 @@ from torch.utils import data
 from algorithm.algorithm_base import Algorithm
 from client import Client
 from dataset import Dataset
+from server import Server
 from utils import *
 
 
@@ -18,11 +19,10 @@ class FedDyn(Algorithm):
         epoch,
         weight_decay,
         model_func,
-        data_obj,
         n_param,
         max_norm,
-        air_comp,
         noiseless,
+        dataset_name,
         save_period,
         print_per,
         alpha_coef,
@@ -35,11 +35,10 @@ class FedDyn(Algorithm):
             epoch,
             weight_decay,
             model_func,
-            data_obj,
             n_param,
             max_norm,
-            air_comp,
             noiseless,
+            dataset_name,
             save_period,
             print_per,
         )
@@ -48,8 +47,6 @@ class FedDyn(Algorithm):
 
     # override
     def local_train(self, client: Client, inputs: dict):
-        trn_x = client.train_data_X
-        trn_y = client.train_data_Y
         self.device = client.device
 
         client.model = self.model_func().to(self.device)
@@ -73,8 +70,8 @@ class FedDyn(Algorithm):
             alpha_coef_adpt,
             inputs["cloud_model_param_tensor"],
             local_param_list_curr,
-            trn_x,
-            trn_y,
+            client.train_data_X,
+            client.train_data_Y,
             inputs["curr_round"],
         )
         curr_model_par = get_model_params([client.model], self.n_param)[
@@ -100,11 +97,10 @@ class FedDyn(Algorithm):
         curr_round,
     ):
         decayed_lr = self.lr * (self.lr_decay_per_round**curr_round)
-        dataset_name = self.data_obj.dataset
 
         n_trn = trn_x.shape[0]
         trn_gen = data.DataLoader(
-            Dataset(trn_x, trn_y, train=True, dataset_name=dataset_name),
+            Dataset(trn_x, trn_y, train=True, dataset_name=self.dataset_name),
             batch_size=self.batch_size,
             shuffle=True,
         )
@@ -178,29 +174,17 @@ class FedDyn(Algorithm):
         return model
 
     # override
-    def aggregate(self, inputs: dict):
+    def aggregate(self, server: Server, inputs: dict):
         clients_list = inputs["clients_list"]
         selected_clnts_idx = inputs["selected_clnts_idx"]
 
-        all_clients_param_list = np.array(
-            [client.client_param for client in clients_list]
-        )
+        clients_param_list = np.array([client.client_param for client in clients_list])
 
-        avg_mdl_param = None
-        if not self.noiseless:
-            print("\nStart AirComp Transmission")
-            avg_mdl_param = self.air_comp.transmission(
-                self.n_param,
-                all_clients_param_list[selected_clnts_idx],
-                inputs["x"],
-                inputs["f"],
-                inputs["h"],
-                inputs["sigma"],
-            )
-        else:
-            avg_mdl_param = np.mean(
-                all_clients_param_list[selected_clnts_idx], axis=0
-            )  # from original FedDyn approach
+        avg_mdl_param = (
+            inputs["avg_mdl_param"]
+            if not self.noiseless
+            else np.mean(clients_param_list[selected_clnts_idx], axis=0)
+        )
 
         print("avg_mdl_param = ", avg_mdl_param)
         # print("n_param = ", self.n_param)
@@ -210,12 +194,12 @@ class FedDyn(Algorithm):
             inputs["local_param_list"], axis=0
         )
 
-        device = clients_list[0].device
-
-        inputs["avg_model"] = set_model(self.model_func(), avg_mdl_param, device)
-        inputs["all_model"] = set_model(
-            self.model_func(), np.mean(all_clients_param_list, axis=0), device
+        server.avg_model = set_model(self.model_func(), avg_mdl_param, server.device)
+        server.all_model = set_model(
+            self.model_func(), np.mean(clients_param_list, axis=0), server.device
         )
         inputs["cloud_model"] = set_model(
-            self.model_func().to(device), inputs["cloud_model_param"], device
+            self.model_func().to(server.device),
+            inputs["cloud_model_param"],
+            server.device,
         )

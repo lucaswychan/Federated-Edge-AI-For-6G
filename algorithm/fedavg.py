@@ -6,6 +6,7 @@ from torch.utils import data
 from algorithm.algorithm_base import Algorithm
 from client import Client
 from dataset import Dataset
+from server import Server
 from utils import *
 
 
@@ -18,11 +19,10 @@ class FedAvg(Algorithm):
         epoch,
         weight_decay,
         model_func,
-        data_obj,
         n_param,
         max_norm,
-        air_comp,
         noiseless,
+        dataset_name,
         save_period,
         print_per,
     ):
@@ -34,19 +34,16 @@ class FedAvg(Algorithm):
             epoch,
             weight_decay,
             model_func,
-            data_obj,
             n_param,
             max_norm,
-            air_comp,
             noiseless,
+            dataset_name,
             save_period,
             print_per,
         )
 
     # override
     def local_train(self, client: Client, inputs: dict):
-        trn_x = client.train_data_X
-        trn_y = client.train_data_Y
         self.device = client.device
 
         client.model = self.model_func().to(self.device)
@@ -62,7 +59,7 @@ class FedAvg(Algorithm):
             get_model_params([client.model], self.n_param)[0],
         )
         client.model = self._train_model(
-            client.model, trn_x, trn_y, inputs["curr_round"]
+            client.model, client.train_data_X, client.train_data_Y, inputs["curr_round"]
         )
         updated_param = get_model_params([client.model], self.n_param)[0]
         print("after updating, client model parameters : ", updated_param)
@@ -71,11 +68,10 @@ class FedAvg(Algorithm):
 
     def _train_model(self, model, trn_x, trn_y, curr_round):
         decayed_lr = self.lr * (self.lr_decay_per_round**curr_round)
-        dataset_name = self.data_obj.dataset
 
         n_trn = trn_x.shape[0]
         trn_gen = data.DataLoader(
-            Dataset(trn_x, trn_y, train=True, dataset_name=dataset_name),
+            Dataset(trn_x, trn_y, train=True, dataset_name=self.dataset_name),
             batch_size=self.batch_size,
             shuffle=True,
         )
@@ -125,43 +121,31 @@ class FedAvg(Algorithm):
         return model
 
     # override
-    def aggregate(self, inputs: dict):
+    def aggregate(self, server: Server, inputs: dict):
         clients_list = inputs["clients_list"]
         selected_clnts_idx = inputs["selected_clnts_idx"]
         weight_list = inputs["weight_list"]
 
-        all_clients_param_list = np.array(
-            [client.client_param for client in clients_list]
-        )
+        clients_param_list = np.array([client.client_param for client in clients_list])
         weight_list = weight_list.reshape((-1, 1))
         print("weight_list.shape = ", weight_list.shape)
 
-        avg_mdl_param = None
-        if not self.noiseless:
-            print("\nStart AirComp Transmission")
-            avg_mdl_param = self.air_comp.transmission(
-                self.n_param,
-                all_clients_param_list[selected_clnts_idx],
-                inputs["x"],
-                inputs["f"],
-                inputs["h"],
-                inputs["sigma"],
-            )
-        else:
-            avg_mdl_param = np.sum(
-                all_clients_param_list[selected_clnts_idx]
+        avg_mdl_param = (
+            inputs["avg_mdl_param"]
+            if not self.noiseless
+            else np.sum(
+                clients_param_list[selected_clnts_idx]
                 * weight_list[selected_clnts_idx]
                 / np.sum(weight_list[selected_clnts_idx]),
                 axis=0,
             )
-
-        device = clients_list[0].device
+        )
 
         print("avg_mdl_param = ", avg_mdl_param)
 
-        inputs["avg_model"] = set_model(self.model_func(), avg_mdl_param, device)
-        inputs["all_model"] = set_model(
+        server.avg_model = set_model(self.model_func(), avg_mdl_param, server.device)
+        server.all_model = set_model(
             self.model_func(),
-            np.sum(all_clients_param_list * weight_list / np.sum(weight_list), axis=0),
-            device,
+            np.sum(clients_param_list * weight_list / np.sum(weight_list), axis=0),
+            server.device,
         )

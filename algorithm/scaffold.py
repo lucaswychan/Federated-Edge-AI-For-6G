@@ -6,6 +6,7 @@ from torch.utils import data
 from algorithm.algorithm_base import Algorithm
 from client import Client
 from dataset import Dataset
+from server import Server
 from utils import *
 
 
@@ -18,11 +19,10 @@ class SCAFFOLD(Algorithm):
         epoch,
         weight_decay,
         model_func,
-        data_obj,
         n_param,
         max_norm,
-        air_comp,
         noiseless,
+        dataset_name,
         save_period,
         print_per,
         n_minibatch,
@@ -36,11 +36,10 @@ class SCAFFOLD(Algorithm):
             epoch,
             weight_decay,
             model_func,
-            data_obj,
             n_param,
             max_norm,
-            air_comp,
             noiseless,
+            dataset_name,
             save_period,
             print_per,
         )
@@ -50,8 +49,6 @@ class SCAFFOLD(Algorithm):
 
     # override
     def local_train(self, client: Client, inputs: dict):
-        trn_x = client.train_data_X
-        trn_y = client.train_data_Y
         self.device = client.device
 
         client.model = self.model_func().to(self.device)
@@ -70,7 +67,7 @@ class SCAFFOLD(Algorithm):
         )
         print("state_params_diff_curr = ", state_params_diff_curr)
         client.model = self._train_model(
-            client.model, trn_x, trn_y, inputs["curr_round"], state_params_diff_curr
+            client.model, client.train_data_X, client.train_data_Y, inputs["curr_round"], state_params_diff_curr
         )
 
         curr_model_par = get_model_params([client.model], self.n_param)[
@@ -91,11 +88,10 @@ class SCAFFOLD(Algorithm):
 
     def _train_model(self, model, trn_x, trn_y, curr_round, state_params_diff):
         decayed_lr = self.lr * (self.lr_decay_per_round**curr_round)
-        dataset_name = self.data_obj.dataset
 
         n_trn = trn_x.shape[0]
         trn_gen = data.DataLoader(
-            Dataset(trn_x, trn_y, train=True, dataset_name=dataset_name),
+            Dataset(trn_x, trn_y, train=True, dataset_name=self.dataset_name),
             batch_size=self.batch_size,
             shuffle=True,
         )
@@ -176,44 +172,28 @@ class SCAFFOLD(Algorithm):
         return model
 
     # override
-    def aggregate(self, inputs: dict):
+    def aggregate(self, server: Server, inputs: dict):
         clients_list = inputs["clients_list"]
         selected_clnts_idx = inputs["selected_clnts_idx"]
 
-        all_clients_param_list = np.array(
-            [client.client_param for client in clients_list]
-        )
+        clients_param_list = np.array([client.client_param for client in clients_list])
         n_clients = len(clients_list)
 
-        avg_mdl_param = None
-        if not self.noiseless:
-            print("\nStart AirComp Transmission")
-            avg_mdl_param = self.air_comp.transmission(
-                self.n_param,
-                all_clients_param_list[selected_clnts_idx],
-                inputs["x"],
-                inputs["f"],
-                inputs["h"],
-                inputs["sigma"],
-            )
-            avg_mdl_param = (
-                self.global_learning_rate * avg_mdl_param
-                + (1 - self.global_learning_rate) * inputs["prev_params"]
-            )
-        else:
-            avg_mdl_param = (
-                self.global_learning_rate
-                * np.mean(all_clients_param_list[selected_clnts_idx], axis=0)
-                + (1 - self.global_learning_rate) * inputs["prev_params"]
-            )
+        avg_mdl_param = (
+            inputs["avg_mdl_param"]
+            if not self.noiseless
+            else np.mean(clients_param_list[selected_clnts_idx], axis=0)
+        )
+        avg_mdl_param = (
+            self.global_learning_rate * avg_mdl_param
+            + (1 - self.global_learning_rate) * inputs["prev_params"]
+        )
 
         inputs["general_state_param"] += 1 / n_clients * inputs["delta_c_sum"]
 
-        device = clients_list[0].device
-
-        inputs["avg_model"] = set_model(
-            self.model_func().to(device), avg_mdl_param, device
+        server.avg_model = set_model(
+            self.model_func().to(server.device), avg_mdl_param, server.device
         )
-        inputs["all_model"] = set_model(
-            self.model_func(), np.mean(all_clients_param_list, axis=0), device
+        server.all_model = set_model(
+            self.model_func(), np.mean(clients_param_list, axis=0), server.device
         )

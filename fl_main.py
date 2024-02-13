@@ -13,7 +13,8 @@ from client import Client
 from dataset import DatasetObject
 from model import Model
 from optimize import Gibbs
-from utils import get_model_params, save_performance
+from server import Server
+from utils import evaluate_performance, get_model_params, save_performance
 
 
 def main():
@@ -26,7 +27,13 @@ def main():
     unbalanced_sgm = 0
     if args.rule == "Dirichlet":
         unbalanced_sgm = 1.0
-    data_obj =  DatasetObject(dataset=args.model_name, n_client=args.n_clients, unbalanced_sgm=unbalanced_sgm, rule=args.rule, rule_arg=0.6)
+    data_obj = DatasetObject(
+        dataset=args.model_name,
+        n_client=args.n_clients,
+        unbalanced_sgm=unbalanced_sgm,
+        rule=args.rule,
+        rule_arg=0.6,
+    )
     # data_obj = DatasetObject(dataset="CIFAR10", n_client=args.n_clients, rule="iid", unbalanced_sgm=0)
     client_x_all = data_obj.clnt_x
     client_y_all = data_obj.clnt_y
@@ -48,7 +55,9 @@ def main():
     model_func = lambda: Model(args.model_name)
     init_model = model_func()
 
-    init_par_list = get_model_params([init_model])[0]  # parameters of the iargs.nitial model
+    init_par_list = get_model_params([init_model])[
+        0
+    ]  # parameters of the iargs.nitial model
     n_param = len(init_par_list)
 
     np.random.seed(args.rand_seed)
@@ -89,7 +98,7 @@ def main():
         n_receive_ant=args.n_receive_ant,
         n_RIS_ele=args.n_RIS_ele,
         Jmax=args.Jmax,
-        K=weight_list,
+        weight_list=weight_list,
         RISON=args.RISON,
         tau=args.tau,
         nit=args.nit,
@@ -98,7 +107,7 @@ def main():
 
     air_comp = AirComp(
         n_receive_ant=args.n_receive_ant,
-        K=weight_list,
+        weight_list=weight_list,
         transmit_power=args.transmit_power,
     )
 
@@ -176,6 +185,8 @@ def main():
     all_model = model_func().to(device)
     all_model.load_state_dict(copy.deepcopy(dict(init_model.named_parameters())))
 
+    server = Server(avg_model, all_model, device, algorithm)
+
     ############################################################################################################
     # Start Communicatoin
     print()
@@ -193,9 +204,9 @@ def main():
     for t in range(args.comm_rounds):
 
         print("This is the {0}-th trial".format(t + 1))
-        
+
         ############################################################################################################
-        
+
         if not args.noiseless:
             print("\nRunning Gibbs Optimization...\n")
             # generate the channel
@@ -207,8 +218,10 @@ def main():
             x_optim, f_optim, h_optim = gibbs.optimize(h_d, G, x, sigma)
 
             end = time.time()
-            print("Running time of Gibbs Optimization: {} seconds\n".format(end - start))
-        
+            print(
+                "Running time of Gibbs Optimization: {} seconds\n".format(end - start)
+            )
+
         else:
             print("\nRunning Random Selection...\n")
             inc_seed = 0
@@ -220,7 +233,7 @@ def main():
                 x_optim = active_clients <= args.act_prob
                 inc_seed += 1
             x_optim = x_optim.astype(np.int8)
-                
+
         ############################################################################################################
         # get the selected clients
 
@@ -228,7 +241,10 @@ def main():
         selected_clnts = clients_list[selected_clnts_idx]
 
         print("Selected Clients Index: {}".format(x_optim))
-        print("Selected Clients: %s\n" % (", ".join(["%2d" % clnt for clnt in selected_clnts_idx])))
+        print(
+            "Selected Clients: %s\n"
+            % (", ".join(["%2d" % clnt for clnt in selected_clnts_idx]))
+        )
 
         ############################################################################################################
         # set up the required parameters for the algorithms
@@ -241,7 +257,7 @@ def main():
 
         # FedProx
         elif args.algorithm_name == "FedProx":
-            avg_model_param = get_model_params([avg_model], n_param)[0]
+            avg_model_param = get_model_params([server.avg_model], n_param)[0]
             avg_model_param_tensor = torch.tensor(
                 avg_model_param, dtype=torch.float32, device=device
             )
@@ -249,7 +265,7 @@ def main():
         # SCAFFOLD
         elif args.algorithm_name == "SCAFFOLD":
             delta_c_sum = np.zeros(n_param)
-            prev_params = get_model_params([avg_model], n_param)[0]
+            prev_params = get_model_params([server.avg_model], n_param)[0]
 
         ############################################################################################################
         # clients training
@@ -260,7 +276,7 @@ def main():
 
             inputs = {
                 "curr_round": t,
-                "avg_model": avg_model,
+                "avg_model": server.avg_model,
             }
 
             if args.algorithm_name == "FedDyn":
@@ -295,8 +311,6 @@ def main():
         inputs = {
             "clients_list": clients_list,
             "selected_clnts_idx": selected_clnts_idx,
-            "avg_model": avg_model,
-            "all_model": all_model,
             "weight_list": weight_list,
         }
 
@@ -312,16 +326,20 @@ def main():
 
         # pass the AirComp optimization parameters
         if not args.noiseless:
-            inputs["x"] = x_optim
-            inputs["f"] = f_optim
-            inputs["h"] = h_optim
-            inputs["sigma"] = sigma
+            print("\nStart AirComp Transmission")
+            clients_param_list = np.array(
+                [client.client_param for client in clients_list]
+            )
+            inputs["avg_mdl_param"] = air_comp.transmit(
+                n_param,
+                clients_param_list[selected_clnts_idx],
+                x_optim,
+                f_optim,
+                h_optim,
+                sigma,
+            )
 
-        algorithm.aggregate(inputs)
-
-        # update the parameters after aggregation
-        avg_model = inputs["avg_model"]
-        all_model = inputs["all_model"]
+        server.aggregate(inputs)
 
         # For FedDyn
         if args.algorithm_name == "FedDyn":
@@ -333,11 +351,14 @@ def main():
             state_param_list[-1] = inputs["general_state_param"]
 
         # get the test accuracy
-        algorithm.evaluate(
+        evaluate_performance(
             cent_x,
             cent_y,
-            avg_model,
-            all_model,
+            data_obj.tst_x,
+            data_obj.tst_y,
+            data_obj.dataset,
+            server.avg_model,
+            server.all_model,
             device,
             tst_perf_sel,
             trn_perf_sel,
