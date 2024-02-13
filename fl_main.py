@@ -5,14 +5,14 @@ import time
 import numpy as np
 import torch
 
-from air_comp import AirComp
 from algorithm.algorithm_factory import AlgorithmFactory
 from args import args_parser
-from channel import Channel
 from client import Client
+from communication.air_comp import AirComp
+from communication.channel import Channel
+from communication.optimize import Gibbs
 from dataset import DatasetObject
 from model import Model
-from optimize import Gibbs
 from server import Server
 from utils import evaluate_performance, get_model_params, save_performance
 
