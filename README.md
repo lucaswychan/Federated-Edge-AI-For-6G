@@ -56,7 +56,7 @@ python3 fl_main.py
 ```
 
 ## Add new algorithm
-This whole code structure enjoys the advantage OOP brings, so adding new algorithms on top of existing codes is effortless.
+This whole code structure enjoys the advantage OOP brings, so adding new algorithms on top of existing codes is a piece of cake.
 1. Create a new Python file under the ```algorithm``` directory.
 <br></br>
 E.g. ```fedsplit.py```
