@@ -4,15 +4,15 @@ import numpy as np
 
 
 class AirComp(object):
-    def __init__(self, n_receive_ant, K, transmit_power):
+    def __init__(self, n_receive_ant, weight_list, transmit_power):
         self.n_receive_ant = n_receive_ant
-        self.K = K
+        self.weight_list = weight_list
         self.transmit_power = transmit_power
 
-    def transmission(self, d, signal, x, f, h, sigma):
+    def transmit(self, d, signal, x, f, h, sigma):
         index = x == 1
         N = self.n_receive_ant
-        K = self.K[index]  # K_m
+        K = self.weight_list[index]  # K_m
         K2 = K**2  # K_m^2
 
         inner = f.conj() @ h[:, index]  # fH h_m(theta)

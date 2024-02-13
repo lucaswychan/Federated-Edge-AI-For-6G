@@ -7,13 +7,22 @@ from scipy.optimize import minimize
 
 class Gibbs(object):
     def __init__(
-        self, n_clients, n_receive_ant, n_RIS_ele, Jmax, K, RISON, tau, nit, threshold
+        self,
+        n_clients,
+        n_receive_ant,
+        n_RIS_ele,
+        Jmax,
+        weight_list,
+        RISON,
+        tau,
+        nit,
+        threshold,
     ):
         self.n_clients = n_clients
         self.n_receive_ant = n_receive_ant
         self.n_RIS_ele = n_RIS_ele
         self.Jmax = Jmax
-        self.K = K
+        self.weight_list = weight_list
         self.RISON = RISON
 
         # for sca_fmincon
@@ -41,7 +50,9 @@ class Gibbs(object):
         L = self.n_RIS_ele
         M = self.n_clients
 
-        K = self.K / np.mean(self.K)  # normalize K to speed up floating computation
+        K = self.weight_list / np.mean(
+            self.weight_list
+        )  # normalize K to speed up floating computation
         K2 = K**2
         Ksum2 = sum(K) ** 2
         x = x0
