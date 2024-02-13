@@ -123,6 +123,7 @@ class AlgorithmFactory:
 <br></br>
 E.g.
 ```python
+# these lines should be in fl_main.py
 required_parameter = np.ones((args.n_clients, n_param))
 .
 .
@@ -132,7 +133,9 @@ inputs["required_parameter"] = required_parameter
 Note that if ```inputs["required_parameter"]``` is updated in ```client.local_train``` or ```server.aggregate```, it should be explicitly updated in ```fl_main.py```
 i.e.
 ```python
-required_parameter = inputs["required_parameter"]  # this line should be in fl_main.py
+# these lines should be in fl_main.py
+if args.algorithm_name == "FedSplit":
+    required_parameter = inputs["required_parameter"]
 ```
 6. Have fun to play with your algorithm !
 
