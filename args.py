@@ -29,7 +29,7 @@ def args_parser():
     
     parser.add_argument('--rule', type=str, default='iid', help="the rule of data partitioning")
     
-    parser.add_argument('--rand_seed', type=int, default=1, help="r andom seed")
+    parser.add_argument('--rand_seed', type=int, default=1, help="random seed")
     
     parser.add_argument('--save_period', type=int, default=1, help="save period")
     

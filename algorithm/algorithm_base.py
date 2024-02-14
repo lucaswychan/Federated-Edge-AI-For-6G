@@ -1,8 +1,5 @@
 from abc import abstractmethod
 
-from utils import get_acc_loss
-
-
 class Algorithm:
     def __init__(
         self,
