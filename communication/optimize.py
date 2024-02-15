@@ -3,6 +3,7 @@ import copy
 
 import numpy as np
 from scipy.optimize import minimize
+import cvxpy as cp
 
 
 class Gibbs(object):
@@ -203,20 +204,28 @@ class Gibbs(object):
                         np.abs(np.conjugate(f) @ h[:, i]) ** 2 + 2 * self.tau * K2[i]
                     )
 
-            fun = lambda mu: np.real(
-                2 * np.linalg.norm(a @ mu)
-                + 2 * np.linalg.norm(b @ mu, ord=1)
-                - c @ mu  # (29)
+            # fun = lambda mu: np.real(
+            #     2 * np.linalg.norm(a @ mu)
+            #     + 2 * np.linalg.norm(b @ mu, ord=1)
+            #     - c @ mu  # (29)
+            # )
+
+            # cons = {"type": "eq", "fun": lambda mu: K2 @ mu - 1}
+            # bnds = ((0, None) for i in range(I))
+            # res = minimize(fun, 1 / K2, bounds=tuple(bnds), constraints=cons)
+            # if ~res.success:
+            #     pass
+            
+            mu = cp.Variable(I, nonneg=True)
+            obj = cp.Minimize(
+                cp.real(2 * cp.norm(a @ mu) + 2 * cp.norm(b @ mu, 1) - c @ mu)
             )
+            prob = cp.Problem(obj, [K2 @ mu == 1])
+            mu.value = 1 / K2
+            prob.solve(solver=cp.ECOS)
 
-            cons = {"type": "eq", "fun": lambda mu: K2 @ mu - 1}
-            bnds = ((0, None) for i in range(I))
-            res = minimize(fun, 1 / K2, bounds=tuple(bnds), constraints=cons)
-            if ~res.success:
-                pass
-
-            fn = a @ res.x
-            thetan = b @ res.x
+            fn = a @ mu.value
+            thetan = b @ mu.value
             fn = fn / np.linalg.norm(fn)
 
             if self.RISON:
