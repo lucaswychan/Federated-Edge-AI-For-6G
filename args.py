@@ -50,13 +50,13 @@ def args_parser():
     
     parser.add_argument('--Jmax', type=int, default=50, help="number of maximum Gibbs Outer loops")
     
-    parser.add_argument('--tau', type=float, default=0.5, help="tau, the SCA regularization term")
+    parser.add_argument('--tau', type=float, default=0.03, help="tau, the SCA regularization term")
     
     parser.add_argument('--nit', type=int, default=100, help="I_max, number of maximum SCA loops")
     
     parser.add_argument('--threshold', type=float, default=1e-2, help="epsilon, SCA early stopping criteria")
     
-    parser.add_argument('--transmit_power', type=float, default=0.05, help="transmit power")
+    parser.add_argument('--transmit_power', type=float, default=0.003, help="transmit power")
     
     parser.add_argument('--noiseless', type=bool, default=False, help="whether the channel is noiseless")
     
