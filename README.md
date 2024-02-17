@@ -43,25 +43,27 @@ Federated Learning (FL) is a decentralized approach to machine learning that add
 * scipy
 * CUDA (if GPU is used)
 * cvxpy
-<br><br/>
+  
 Or you can install all the packages via
 ```
 pip install -r requirements.txt
 ```
 
 ## Instructions
-There are four algorithms available to play with, which are FedDyn, FedAvg, FedProx, and SCAFFOLD.
-The default algorithm is FedDyn, but you can feel free to change the algorithm by adding ```--algorithm_name={FedAvg, FedProx, FedDyn, SCAFFOLD}```.
-For the details of the parameters, please visit [Parameters](#-Parameters)
+There are four algorithms available to play with, which are FedDyn, FedAvg, FedProx, and SCAFFOLD  
+The default algorithm is FedDyn, but you can feel free to change the algorithm by adding ```--algorithm_name={FedAvg, FedProx, FedDyn, SCAFFOLD}```  
+  
+For more details of the parameters, please visit [Parameters](#parameters)
 ```
 python3 fl_main.py
 ```
 
 ## Add new algorithm
-This whole code structure enjoys the advantage OOP brings, so adding new algorithms on top of existing codes is a piece of cake.
-1. Create a new Python file under the ```algorithm``` directory.
+This whole code structure enjoys the advantage OOP brings, so adding new algorithms on top of the existing codes is a piece of cake.
+1. Create a new Python file under the ```algorithm``` directory
 <br></br>
 E.g. ```fedsplit.py```
+<br></br>
 2. Construct a new class inheriting ```Algorithm``` in the corresponding Python file.
 <br></br>
 E.g.
@@ -72,6 +74,7 @@ class FedSplit(Algorithm):
 
         self.new_parameter = new_parameter
 ```
+<br></br>
 3. Override the method ```local_train``` and ```aggregate```.
 <br></br>
 E.g.
@@ -89,6 +92,7 @@ class FedSplit(Algorithm):
     def aggregate(self, server: Server, inputs: dict):
         # aggregate the global model
 ```
+<br></br>
 4. Add the corresponding class in ```AlgorithmFactory```, which is in ```algorithm/algorithm_factory.py```
 <br></br>
 E.g.
@@ -121,6 +125,7 @@ class AlgorithmFactory:
                 new_parameter
             )
 ```
+<br></br>
 5. Create the required parameters for this algorithm in ```fl_main.py```
 <br></br>
 E.g.
@@ -132,14 +137,16 @@ required_parameter = np.ones((args.n_clients, n_param))
 .
 inputs["required_parameter"] = required_parameter
 ```
-Note that if ```inputs["required_parameter"]``` is updated in ```client.local_train``` or ```server.aggregate```, it should be explicitly updated in ```fl_main.py```
-i.e.
+Note that if ```inputs["required_parameter"]``` is updated in ```client.local_train``` or ```server.aggregate```, it should be explicitly updated in ```fl_main.py```  
+i.e.  
 ```python
 # these lines should be in fl_main.py
 if args.algorithm_name == "FedSplit":
     required_parameter = inputs["required_parameter"]
 ```
+<br></br>
 6. Have fun to play with your algorithm !
+<br></br>
 
 ## Parameters
 There are various parameters required by the algorithms. 
