@@ -42,6 +42,7 @@ Federated Learning (FL) is a decentralized approach to machine learning that add
 * torchvision
 * scipy
 * CUDA (if GPU is used)
+* cvxpy
 <br><br/>
 Or you can install all the packages via
 ```
@@ -50,7 +51,8 @@ pip install -r requirements.txt
 
 ## Instructions
 There are four algorithms available to play with, which are FedDyn, FedAvg, FedProx, and SCAFFOLD.
-The default algorithm is FedDyn, but you can feel free to change the algorithm by adding ```--algorithm_name=```
+The default algorithm is FedDyn, but you can feel free to change the algorithm by adding ```--algorithm_name={FedAvg, FedProx, FedDyn, SCAFFOLD}```.
+For the details of the parameters, please visit [Parameters](##-Parameters)
 ```
 python3 fl_main.py
 ```
