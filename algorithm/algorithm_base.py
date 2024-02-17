@@ -1,5 +1,6 @@
 from abc import abstractmethod
 
+
 class Algorithm:
     def __init__(
         self,
