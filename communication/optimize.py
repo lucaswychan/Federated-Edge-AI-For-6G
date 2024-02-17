@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 import copy
 
-import numpy as np
-from scipy.optimize import minimize
 import cvxpy as cp
+import numpy as np
 
 
 class Gibbs(object):
@@ -14,7 +13,6 @@ class Gibbs(object):
         n_RIS_ele,
         Jmax,
         weight_list,
-        RISON,
         tau,
         nit,
         threshold,
@@ -24,7 +22,6 @@ class Gibbs(object):
         self.n_RIS_ele = n_RIS_ele
         self.Jmax = Jmax
         self.weight_list = weight_list
-        self.RISON = RISON
 
         # for sca_fmincon
         self.tau = tau
@@ -138,8 +135,6 @@ class Gibbs(object):
 
             theta = np.ones([L], dtype=complex)
             f = h_d[:, 0] / np.linalg.norm(h_d[:, 0])
-            if not self.RISON:
-                theta = np.zeros([L])
         else:
             index = x == 1
 
@@ -165,8 +160,6 @@ class Gibbs(object):
 
         if theta is None:
             theta = np.ones([L], dtype=complex)
-        if not self.RISON:
-            theta = np.zeros([L], dtype=complex)
         result = np.zeros(self.nit)
         h = np.zeros([N, I], dtype=complex)
         for i in range(I):
@@ -187,35 +180,21 @@ class Gibbs(object):
                 a[:, i] = (
                     self.tau * K2[i] * f + np.outer(h[:, i], np.conjugate(h[:, i])) @ f
                 )
-                if self.RISON:
-                    b[:, i] = (
-                        self.tau * K2[i] * theta + G[:, :, i].conj().T @ F_cro @ h[:, i]
+                
+                b[:, i] = (
+                    self.tau * K2[i] * theta + G[:, :, i].conj().T @ F_cro @ h[:, i]
+                )
+                
+                c[:, i] = (
+                    np.abs(np.conjugate(f) @ h[:, i]) ** 2
+                    + 2 * self.tau * K2[i] * (L + 1)
+                    + 2
+                    * np.real(
+                        (theta.conj().T) @ (G[:, :, i].conj().T) @ F_cro @ h[:, i]
                     )
-                    c[:, i] = (
-                        np.abs(np.conjugate(f) @ h[:, i]) ** 2
-                        + 2 * self.tau * K2[i] * (L + 1)
-                        + 2
-                        * np.real(
-                            (theta.conj().T) @ (G[:, :, i].conj().T) @ F_cro @ h[:, i]
-                        )
-                    )
-                else:
-                    c[:, i] = (
-                        np.abs(np.conjugate(f) @ h[:, i]) ** 2 + 2 * self.tau * K2[i]
-                    )
-
-            # fun = lambda mu: np.real(
-            #     2 * np.linalg.norm(a @ mu)
-            #     + 2 * np.linalg.norm(b @ mu, ord=1)
-            #     - c @ mu  # (29)
-            # )
-
-            # cons = {"type": "eq", "fun": lambda mu: K2 @ mu - 1}
-            # bnds = ((0, None) for i in range(I))
-            # res = minimize(fun, 1 / K2, bounds=tuple(bnds), constraints=cons)
-            # if ~res.success:
-            #     pass
+                )
             
+            # convex optimization
             mu = cp.Variable(I, nonneg=True)
             obj = cp.Minimize(
                 cp.real(2 * cp.norm(a @ mu) + 2 * cp.norm(b @ mu, 1) - c @ mu)
@@ -227,11 +206,11 @@ class Gibbs(object):
             fn = a @ mu.value
             thetan = b @ mu.value
             fn = fn / np.linalg.norm(fn)
-
-            if self.RISON:
-                thetan = thetan / np.abs(thetan)
-                theta = thetan
             f = fn
+
+            thetan = thetan / np.abs(thetan)
+            theta = thetan
+            
             for i in range(I):
                 h[:, i] = h_d[:, i] + G[:, :, i] @ theta
             obj = min(np.abs(np.conjugate(f) @ h) ** 2 / K2)  # (24)

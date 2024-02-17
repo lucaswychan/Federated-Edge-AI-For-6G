@@ -99,7 +99,6 @@ def main():
         n_RIS_ele=args.n_RIS_ele,
         Jmax=args.Jmax,
         weight_list=weight_list,
-        RISON=args.RISON,
         tau=args.tau,
         nit=args.nit,
         threshold=args.threshold,
@@ -248,6 +247,7 @@ def main():
 
         ############################################################################################################
         # set up the required parameters for the algorithms
+        # feel free to add new parameters for your added algorithm
 
         # FedDyn
         if args.algorithm_name == "FedDyn":

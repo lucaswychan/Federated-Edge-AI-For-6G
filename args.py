@@ -50,8 +50,6 @@ def args_parser():
     
     parser.add_argument('--Jmax', type=int, default=50, help="number of maximum Gibbs Outer loops")
     
-    parser.add_argument('--RISON', type=bool, default=True, help="whether RIS is on")
-    
     parser.add_argument('--tau', type=float, default=0.5, help="tau, the SCA regularization term")
     
     parser.add_argument('--nit', type=int, default=100, help="I_max, number of maximum SCA loops")
