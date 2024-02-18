@@ -61,7 +61,7 @@ class FedProx(Algorithm):
             "client model parameters : ",
             get_model_params([client.model], self.n_param)[0],
         )
-        client.model = self._train_model(
+        client.model = self.__train_model(
             client.model,
             client.train_data_X,
             client.train_data_Y,
@@ -73,7 +73,7 @@ class FedProx(Algorithm):
 
         client.client_param = updated_param
 
-    def _train_model(self, model, trn_x, trn_y, curr_round, avg_mdl_param):
+    def __train_model(self, model, trn_x, trn_y, curr_round, avg_mdl_param):
         decayed_lr = self.lr * (self.lr_decay_per_round**curr_round)
 
         n_trn = trn_x.shape[0]

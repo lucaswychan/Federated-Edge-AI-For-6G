@@ -65,7 +65,7 @@ class FedDyn(Algorithm):
         )  # = local_grad_vector
         print("local_param_list_curr = ", local_param_list_curr)
         print("cloud_model_param_tensor = ", inputs["cloud_model_param_tensor"])
-        client.model = self._train_model(
+        client.model = self.__train_model(
             model,
             alpha_coef_adpt,
             inputs["cloud_model_param_tensor"],
@@ -86,7 +86,7 @@ class FedDyn(Algorithm):
 
         client.client_param = curr_model_par
 
-    def _train_model(
+    def __train_model(
         self,
         model,
         alpha_coef_adpt,

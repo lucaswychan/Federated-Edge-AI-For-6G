@@ -66,7 +66,7 @@ class SCAFFOLD(Algorithm):
             device=self.device,
         )
         print("state_params_diff_curr = ", state_params_diff_curr)
-        client.model = self._train_model(
+        client.model = self.__train_model(
             client.model, client.train_data_X, client.train_data_Y, inputs["curr_round"], state_params_diff_curr
         )
 
@@ -86,7 +86,7 @@ class SCAFFOLD(Algorithm):
 
         client.client_param = curr_model_par
 
-    def _train_model(self, model, trn_x, trn_y, curr_round, state_params_diff):
+    def __train_model(self, model, trn_x, trn_y, curr_round, state_params_diff):
         decayed_lr = self.lr * (self.lr_decay_per_round**curr_round)
 
         n_trn = trn_x.shape[0]
