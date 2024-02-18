@@ -86,7 +86,7 @@ class FedSplit(Algorithm):
     def local_train(self, client: Client, inputs: dict):
         # client local training
 
-    def _train_model(self, ...):
+    def __train_model(self, ...):
         # helper function for local_train (Optional)
 
     def aggregate(self, server: Server, inputs: dict):
@@ -174,9 +174,8 @@ For more details you can visit ```args.py```
 | SNR   | noise variance/0.1W in dB   |90.0   |float   | [0, inf) | 
 | location_range   | location range between clients and RIS   |30   |int   | [0, inf) | 
 | Jmax   | number of maximum Gibbs Outer loops   |50   |int   | [1, inf) |
-| RISON   | whether RIS is presented in the FL system  |True   |bool   | True, False |
-| tau   | the SCA regularization term   |0.5   |float   | [0, inf) | 
+| tau   | the SCA regularization term   |0.03   |float   | [0, inf) | 
 | nit   | I_max, number of maximum SCA loops   |100   |int   | [1, inf) | 
 | threshold   | epsilon, SCA early stopping criteria   |0.01   |float   | [0, inf) | 
-| transmit_power   | transmit power of clients   |0.05   |float   | [0, inf) | 
+| transmit_power   | transmit power of clients   |0.003   |float   | [0, inf) | 
 | noiseless   | whether the channel is noiseless   |False   |bool   | True, False | 
