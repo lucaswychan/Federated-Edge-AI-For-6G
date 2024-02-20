@@ -374,6 +374,7 @@ def main():
         tst_perf_all,
         algorithm.name,
         data_obj.name,
+        args.model_name,
         args.n_clients,
         args.noiseless,
     )

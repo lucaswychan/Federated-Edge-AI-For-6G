@@ -91,6 +91,7 @@ def save_performance(
     tst_perf_all,
     algorithm_name,
     data_obj_name,
+    model_name,
     n_clients,
     noiseless,
 ):
@@ -111,12 +112,13 @@ def save_performance(
     plt.xticks(fontsize=16)
     plt.yticks(fontsize=16)
     plt.savefig(
-        "Output/{}/{}_{}cln_{}comm_{}.pdf".format(
+        "Output/{}/{}_{}cln_{}comm_{}_{}.pdf".format(
             data_obj_name,
             algorithm_name,
             n_clients,
             communication_rounds,
             "noiseless" if noiseless else "noisy",
+            model_name
         ),
         dpi=1000,
         bbox_inches="tight",
@@ -128,6 +130,7 @@ def save_performance(
             n_clients,
             communication_rounds,
             "noiseless" if noiseless else "noisy",
+            model_name
         ),
         tst_perf_all,
     )
