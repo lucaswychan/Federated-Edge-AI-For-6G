@@ -124,7 +124,7 @@ def save_performance(
         bbox_inches="tight",
     )
     np.save(
-        "Output/{}/{}_{}cln_{}comm_{}_tst_perf_all.npy".format(
+        "Output/{}/{}_{}cln_{}comm_{}_{}_tst_perf_all.npy".format(
             data_obj_name,
             algorithm_name,
             n_clients,
