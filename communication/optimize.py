@@ -1,4 +1,16 @@
-# -*- coding: utf-8 -*-
+"""
+@article{
+    liu2021reconfigurable,
+    title={Reconfigurable Intelligent Surface Enabled Federated Learning: A Unified Communication-Learning Design Approach},
+    author={Liu, Hang and Yuan, Xiaojun and Zhang, Ying-Jun Angela},
+    journal={arXiv preprint arXiv:2011.10282},
+    year={2021},
+    eprint={2011.10282},
+    archivePrefix={arXiv},
+    primaryClass={cs.IT}
+}
+"""
+
 import copy
 
 import cvxpy as cp

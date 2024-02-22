@@ -49,18 +49,19 @@ class DatasetObject:
                     transform=transform,
                 )
 
+                print("mnist train len = ", len(trnset))
                 trn_load = torch.utils.data.DataLoader(
-                    trnset, batch_size=60000, shuffle=False, num_workers=1
+                    trnset, batch_size=len(trnset), shuffle=False, num_workers=1
                 )
                 tst_load = torch.utils.data.DataLoader(
-                    tstset, batch_size=10000, shuffle=False, num_workers=1
+                    tstset, batch_size=len(tstset), shuffle=False, num_workers=1
                 )
                 self.channels = 1
                 self.width = 28
                 self.height = 28
                 self.n_cls = 10
 
-            if self.dataset == "CIFAR10":
+            elif self.dataset == "CIFAR10":
                 transform = transforms.Compose(
                     [
                         transforms.ToTensor(),
@@ -83,18 +84,19 @@ class DatasetObject:
                     transform=transform,
                 )
 
+                print("CIFAR10 train len = ", len(trnset))
                 trn_load = torch.utils.data.DataLoader(
-                    trnset, batch_size=50000, shuffle=False, num_workers=1
+                    trnset, batch_size=len(trnset), shuffle=False, num_workers=1
                 )
                 tst_load = torch.utils.data.DataLoader(
-                    tstset, batch_size=10000, shuffle=False, num_workers=1
+                    tstset, batch_size=len(tstset), shuffle=False, num_workers=1
                 )
                 self.channels = 3
                 self.width = 32
                 self.height = 32
                 self.n_cls = 10
 
-            if self.dataset == "CIFAR100":
+            elif self.dataset == "CIFAR100":
                 print(self.dataset)
                 # mean and std are validated here: https://gist.github.com/weiaicunzai/e623931921efefd4c331622c344d8151
                 transform = transforms.Compose(
@@ -118,17 +120,48 @@ class DatasetObject:
                     transform=transform,
                 )
                 trn_load = torch.utils.data.DataLoader(
-                    trnset, batch_size=50000, shuffle=False, num_workers=0
+                    trnset, batch_size=len(trnset), shuffle=False, num_workers=0
                 )
                 tst_load = torch.utils.data.DataLoader(
-                    tstset, batch_size=10000, shuffle=False, num_workers=0
+                    tstset, batch_size=len(tstset), shuffle=False, num_workers=0
                 )
                 self.channels = 3
                 self.width = 32
                 self.height = 32
                 self.n_cls = 100
+                
+            elif self.dataset == "emnist":
+                transform = transforms.Compose(
+                    [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
+                )
+                trnset = torchvision.datasets.EMNIST(
+                    root="%s/Raw" % self.data_path,
+                    split="letters",
+                    train=True,
+                    download=True,
+                    transform=transform,
+                )
+                print("emnist classes = ", trnset.classes)
+                tstset = torchvision.datasets.MNIST(
+                    root="%s/Raw" % self.data_path,
+                    train=False,
+                    download=True,
+                    transform=transform,
+                )
 
-            if self.dataset != "emnist":
+                trn_load = torch.utils.data.DataLoader(
+                    trnset, batch_size=len(trnset), shuffle=False, num_workers=1
+                )
+                tst_load = torch.utils.data.DataLoader(
+                    tstset, batch_size=len(tstset), shuffle=False, num_workers=1
+                )
+                self.channels = 1
+                self.width = 28
+                self.height = 28
+                self.n_cls = 10
+                
+
+            if self.dataset:
                 trn_itr = trn_load.__iter__()
                 tst_itr = tst_load.__iter__()
                 # labels are of shape (n_data,)
@@ -140,51 +173,51 @@ class DatasetObject:
                 tst_x = tst_x.numpy()
                 tst_y = tst_y.numpy().reshape(-1, 1)
 
-            if self.dataset == "emnist":
-                emnist = io.loadmat(self.data_path + "/Raw/matlab/emnist-letters.mat")
-                # load training dataset
-                x_train = emnist["dataset"][0][0][0][0][0][0]
-                x_train = x_train.astype(np.float32)
+            # elif self.dataset == "emnist":
+            #     emnist = io.loadmat(self.data_path + "/Raw/matlab/emnist-letters.mat")
+            #     # load training dataset
+            #     x_train = emnist["dataset"][0][0][0][0][0][0]
+            #     x_train = x_train.astype(np.float32)
 
-                # load training labels
-                y_train = emnist["dataset"][0][0][0][0][0][1] - 1  # make first class 0
+            #     # load training labels
+            #     y_train = emnist["dataset"][0][0][0][0][0][1] - 1  # make first class 0
 
-                # take first 10 classes of letters
-                trn_idx = np.where(y_train < 10)[0]
+            #     # take first 10 classes of letters
+            #     trn_idx = np.where(y_train < 10)[0]
 
-                y_train = y_train[trn_idx]
-                x_train = x_train[trn_idx]
+            #     y_train = y_train[trn_idx]
+            #     x_train = x_train[trn_idx]
 
-                mean_x = np.mean(x_train)
-                std_x = np.std(x_train)
+            #     mean_x = np.mean(x_train)
+            #     std_x = np.std(x_train)
 
-                # load test dataset
-                x_test = emnist["dataset"][0][0][1][0][0][0]
-                x_test = x_test.astype(np.float32)
+            #     # load test dataset
+            #     x_test = emnist["dataset"][0][0][1][0][0][0]
+            #     x_test = x_test.astype(np.float32)
 
-                # load test labels
-                y_test = emnist["dataset"][0][0][1][0][0][1] - 1  # make first class 0
+            #     # load test labels
+            #     y_test = emnist["dataset"][0][0][1][0][0][1] - 1  # make first class 0
 
-                tst_idx = np.where(y_test < 10)[0]
+            #     tst_idx = np.where(y_test < 10)[0]
 
-                y_test = y_test[tst_idx]
-                x_test = x_test[tst_idx]
+            #     y_test = y_test[tst_idx]
+            #     x_test = x_test[tst_idx]
 
-                x_train = x_train.reshape((-1, 1, 28, 28))
-                x_test = x_test.reshape((-1, 1, 28, 28))
+            #     x_train = x_train.reshape((-1, 1, 28, 28))
+            #     x_test = x_test.reshape((-1, 1, 28, 28))
 
-                # normalise train and test features
+            #     # normalise train and test features
 
-                trn_x = (x_train - mean_x) / std_x
-                trn_y = y_train
+            #     trn_x = (x_train - mean_x) / std_x
+            #     trn_y = y_train
 
-                tst_x = (x_test - mean_x) / std_x
-                tst_y = y_test
+            #     tst_x = (x_test - mean_x) / std_x
+            #     tst_y = y_test
 
-                self.channels = 1
-                self.width = 28
-                self.height = 28
-                self.n_cls = 10
+            #     self.channels = 1
+            #     self.width = 28
+            #     self.height = 28
+            #     self.n_cls = 10
 
             # Shuffle Data
             rand_perm = np.random.permutation(len(trn_y))
@@ -390,22 +423,22 @@ class DatasetObject:
                 self.width = 28
                 self.height = 28
                 self.n_cls = 10
-            if self.dataset == "CIFAR10":
+            elif self.dataset == "CIFAR10":
                 self.channels = 3
                 self.width = 32
                 self.height = 32
                 self.n_cls = 10
-            if self.dataset == "CIFAR100":
+            elif self.dataset == "CIFAR100":
                 self.channels = 3
                 self.width = 32
                 self.height = 32
                 self.n_cls = 100
-            if self.dataset == "fashion_mnist":
+            elif self.dataset == "fashion_mnist":
                 self.channels = 1
                 self.width = 28
                 self.height = 28
                 self.n_cls = 10
-            if self.dataset == "emnist":
+            elif self.dataset == "emnist":
                 self.channels = 1
                 self.width = 28
                 self.height = 28
@@ -570,240 +603,6 @@ class DatasetSynthetic:
         self.tst_y = np.concatenate(self.clnt_y, axis=0)
         self.n_client = len(data_x)
         print(self.clnt_x.shape)
-
-
-# Original prepration is from LEAF paper...
-# This loads Shakespeare dataset only.
-# data_path/train and data_path/test are assumed to be processed
-# To make the dataset smaller,
-# We take 2000 datapoints for each client in the train_set
-
-
-class ShakespeareObjectCrop:
-    def __init__(
-        self, data_path, dataset_prefix, crop_amount=2000, tst_ratio=5, rand_seed=0
-    ):
-        self.dataset = "shakespeare"
-        self.name = dataset_prefix
-        users, groups, train_data, test_data = read_data(
-            data_path + "train/", data_path + "test/"
-        )
-
-        # train_data is a dictionary whose keys are users list elements
-        # the value of each key is another dictionary.
-        # This dictionary consists of key value pairs as
-        # (x, features - list of input 80 lenght long words) and (y, target - list one letter)
-        # test_data has the same strucute.
-        # Ignore groups information, combine test cases for different clients into one test data
-        # Change structure to DatasetObject structure
-
-        self.users = users
-
-        self.n_client = len(users)
-        self.user_idx = np.asarray(list(range(self.n_client)))
-        self.clnt_x = list(range(self.n_client))
-        self.clnt_y = list(range(self.n_client))
-
-        tst_data_count = 0
-
-        for clnt in range(self.n_client):
-            np.random.seed(rand_seed + clnt)
-            start = np.random.randint(len(train_data[users[clnt]]["x"]) - crop_amount)
-            self.clnt_x[clnt] = np.asarray(train_data[users[clnt]]["x"])[
-                start : start + crop_amount
-            ]
-            self.clnt_y[clnt] = np.asarray(train_data[users[clnt]]["y"])[
-                start : start + crop_amount
-            ]
-
-        tst_data_count = (crop_amount // tst_ratio) * self.n_client
-        self.tst_x = list(range(tst_data_count))
-        self.tst_y = list(range(tst_data_count))
-
-        tst_data_count = 0
-        for clnt in range(self.n_client):
-            curr_amount = crop_amount // tst_ratio
-            np.random.seed(rand_seed + clnt)
-            start = np.random.randint(len(test_data[users[clnt]]["x"]) - curr_amount)
-            self.tst_x[tst_data_count : tst_data_count + curr_amount] = np.asarray(
-                test_data[users[clnt]]["x"]
-            )[start : start + curr_amount]
-            self.tst_y[tst_data_count : tst_data_count + curr_amount] = np.asarray(
-                test_data[users[clnt]]["y"]
-            )[start : start + curr_amount]
-
-            tst_data_count += curr_amount
-
-        self.clnt_x = np.asarray(self.clnt_x)
-        self.clnt_y = np.asarray(self.clnt_y)
-
-        self.tst_x = np.asarray(self.tst_x)
-        self.tst_y = np.asarray(self.tst_y)
-
-        # Convert characters to numbers
-
-        self.clnt_x_char = np.copy(self.clnt_x)
-        self.clnt_y_char = np.copy(self.clnt_y)
-
-        self.tst_x_char = np.copy(self.tst_x)
-        self.tst_y_char = np.copy(self.tst_y)
-
-        self.clnt_x = list(range(len(self.clnt_x_char)))
-        self.clnt_y = list(range(len(self.clnt_x_char)))
-
-        for clnt in range(len(self.clnt_x_char)):
-            clnt_list_x = list(range(len(self.clnt_x_char[clnt])))
-            clnt_list_y = list(range(len(self.clnt_x_char[clnt])))
-
-            for idx in range(len(self.clnt_x_char[clnt])):
-                clnt_list_x[idx] = np.asarray(
-                    word_to_indices(self.clnt_x_char[clnt][idx])
-                )
-                clnt_list_y[idx] = np.argmax(
-                    np.asarray(letter_to_vec(self.clnt_y_char[clnt][idx]))
-                ).reshape(-1)
-
-            self.clnt_x[clnt] = np.asarray(clnt_list_x)
-            self.clnt_y[clnt] = np.asarray(clnt_list_y)
-
-        self.clnt_x = np.asarray(self.clnt_x)
-        self.clnt_y = np.asarray(self.clnt_y)
-
-        self.tst_x = list(range(len(self.tst_x_char)))
-        self.tst_y = list(range(len(self.tst_x_char)))
-
-        for idx in range(len(self.tst_x_char)):
-            self.tst_x[idx] = np.asarray(word_to_indices(self.tst_x_char[idx]))
-            self.tst_y[idx] = np.argmax(
-                np.asarray(letter_to_vec(self.tst_y_char[idx]))
-            ).reshape(-1)
-
-        self.tst_x = np.asarray(self.tst_x)
-        self.tst_y = np.asarray(self.tst_y)
-
-
-class ShakespeareObjectCrop_noniid:
-    def __init__(
-        self,
-        data_path,
-        dataset_prefix,
-        n_client=100,
-        crop_amount=2000,
-        tst_ratio=5,
-        rand_seed=0,
-    ):
-        self.dataset = "shakespeare"
-        self.name = dataset_prefix
-        users, groups, train_data, test_data = read_data(
-            data_path + "train/", data_path + "test/"
-        )
-
-        # train_data is a dictionary whose keys are users list elements
-        # the value of each key is another dictionary.
-        # This dictionary consists of key value pairs as
-        # (x, features - list of input 80 lenght long words) and (y, target - list one letter)
-        # test_data has the same strucute.
-        # Change structure to DatasetObject structure
-
-        self.users = users
-
-        tst_data_count_per_clnt = crop_amount // tst_ratio
-        # Group clients that have at least crop_amount datapoints
-        arr = []
-        for clnt in range(len(users)):
-            if (
-                len(np.asarray(train_data[users[clnt]]["y"])) > crop_amount
-                and len(np.asarray(test_data[users[clnt]]["y"]))
-                > tst_data_count_per_clnt
-            ):
-                arr.append(clnt)
-
-        # choose n_client clients randomly
-        self.n_client = n_client
-        np.random.seed(rand_seed)
-        np.random.shuffle(arr)
-        self.user_idx = arr[: self.n_client]
-
-        self.clnt_x = list(range(self.n_client))
-        self.clnt_y = list(range(self.n_client))
-
-        tst_data_count = 0
-
-        for clnt, idx in enumerate(self.user_idx):
-            np.random.seed(rand_seed + clnt)
-            start = np.random.randint(len(train_data[users[idx]]["x"]) - crop_amount)
-            self.clnt_x[clnt] = np.asarray(train_data[users[idx]]["x"])[
-                start : start + crop_amount
-            ]
-            self.clnt_y[clnt] = np.asarray(train_data[users[idx]]["y"])[
-                start : start + crop_amount
-            ]
-
-        tst_data_count = (crop_amount // tst_ratio) * self.n_client
-        self.tst_x = list(range(tst_data_count))
-        self.tst_y = list(range(tst_data_count))
-
-        tst_data_count = 0
-
-        for clnt, idx in enumerate(self.user_idx):
-
-            curr_amount = crop_amount // tst_ratio
-            np.random.seed(rand_seed + clnt)
-            start = np.random.randint(len(test_data[users[idx]]["x"]) - curr_amount)
-            self.tst_x[tst_data_count : tst_data_count + curr_amount] = np.asarray(
-                test_data[users[idx]]["x"]
-            )[start : start + curr_amount]
-            self.tst_y[tst_data_count : tst_data_count + curr_amount] = np.asarray(
-                test_data[users[idx]]["y"]
-            )[start : start + curr_amount]
-            tst_data_count += curr_amount
-
-        self.clnt_x = np.asarray(self.clnt_x)
-        self.clnt_y = np.asarray(self.clnt_y)
-
-        self.tst_x = np.asarray(self.tst_x)
-        self.tst_y = np.asarray(self.tst_y)
-
-        # Convert characters to numbers
-
-        self.clnt_x_char = np.copy(self.clnt_x)
-        self.clnt_y_char = np.copy(self.clnt_y)
-
-        self.tst_x_char = np.copy(self.tst_x)
-        self.tst_y_char = np.copy(self.tst_y)
-
-        self.clnt_x = list(range(len(self.clnt_x_char)))
-        self.clnt_y = list(range(len(self.clnt_x_char)))
-
-        for clnt in range(len(self.clnt_x_char)):
-            clnt_list_x = list(range(len(self.clnt_x_char[clnt])))
-            clnt_list_y = list(range(len(self.clnt_x_char[clnt])))
-
-            for idx in range(len(self.clnt_x_char[clnt])):
-                clnt_list_x[idx] = np.asarray(
-                    word_to_indices(self.clnt_x_char[clnt][idx])
-                )
-                clnt_list_y[idx] = np.argmax(
-                    np.asarray(letter_to_vec(self.clnt_y_char[clnt][idx]))
-                ).reshape(-1)
-
-            self.clnt_x[clnt] = np.asarray(clnt_list_x)
-            self.clnt_y[clnt] = np.asarray(clnt_list_y)
-
-        self.clnt_x = np.asarray(self.clnt_x)
-        self.clnt_y = np.asarray(self.clnt_y)
-
-        self.tst_x = list(range(len(self.tst_x_char)))
-        self.tst_y = list(range(len(self.tst_x_char)))
-
-        for idx in range(len(self.tst_x_char)):
-            self.tst_x[idx] = np.asarray(word_to_indices(self.tst_x_char[idx]))
-            self.tst_y[idx] = np.argmax(
-                np.asarray(letter_to_vec(self.tst_y_char[idx]))
-            ).reshape(-1)
-
-        self.tst_x = np.asarray(self.tst_x)
-        self.tst_y = np.asarray(self.tst_y)
 
 
 class Dataset(torch.utils.data.Dataset):

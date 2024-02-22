@@ -1,3 +1,14 @@
+"""
+@inproceedings{
+    acar2021federated,
+    title={Federated Learning Based on Dynamic Regularization},
+    author={Durmus Alp Emre Acar and Yue Zhao and Ramon Matas and Matthew Mattina and Paul Whatmough and Venkatesh Saligrama},
+    booktitle={International Conference on Learning Representations},
+    year={2021},
+    url={https://openreview.net/forum?id=B7v4QMR6Z9w}
+}
+"""
+
 import copy
 
 import torch
