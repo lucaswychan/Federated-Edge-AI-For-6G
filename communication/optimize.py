@@ -192,11 +192,11 @@ class Gibbs(object):
                 a[:, i] = (
                     self.tau * K2[i] * f + np.outer(h[:, i], np.conjugate(h[:, i])) @ f
                 )
-                
+
                 b[:, i] = (
                     self.tau * K2[i] * theta + G[:, :, i].conj().T @ F_cro @ h[:, i]
                 )
-                
+
                 c[:, i] = (
                     np.abs(np.conjugate(f) @ h[:, i]) ** 2
                     + 2 * self.tau * K2[i] * (L + 1)
@@ -205,7 +205,7 @@ class Gibbs(object):
                         (theta.conj().T) @ (G[:, :, i].conj().T) @ F_cro @ h[:, i]
                     )
                 )
-            
+
             # convex optimization
             mu = cp.Variable(I, nonneg=True)
             obj = cp.Minimize(
@@ -222,7 +222,7 @@ class Gibbs(object):
 
             thetan = thetan / np.abs(thetan)
             theta = thetan
-            
+
             for i in range(I):
                 h[:, i] = h_d[:, i] + G[:, :, i] @ theta
             obj = min(np.abs(np.conjugate(f) @ h) ** 2 / K2)  # (24)

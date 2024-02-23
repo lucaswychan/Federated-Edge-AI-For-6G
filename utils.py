@@ -118,7 +118,7 @@ def save_performance(
             n_clients,
             communication_rounds,
             "noiseless" if noiseless else "noisy",
-            model_name
+            model_name,
         ),
         dpi=1000,
         bbox_inches="tight",
@@ -130,7 +130,7 @@ def save_performance(
             n_clients,
             communication_rounds,
             "noiseless" if noiseless else "noisy",
-            model_name
+            model_name,
         ),
         tst_perf_all,
     )

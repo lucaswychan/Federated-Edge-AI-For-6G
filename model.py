@@ -7,7 +7,7 @@ class Model(nn.Module):
     def __init__(self, name, args=True):
         super(Model, self).__init__()
         self.name = name
-        
+
         if self.name == "Linear":
             [self.n_dim, self.n_out] = args
             self.fc = nn.Linear(self.n_dim, self.n_out)
@@ -82,7 +82,6 @@ class Model(nn.Module):
                 resnet18.state_dict().keys()
             ), "More BN layers are there..."
             self.model = resnet18
-            
 
     def forward(self, x):
         if self.name == "Linear":

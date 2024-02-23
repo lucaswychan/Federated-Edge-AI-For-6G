@@ -7,6 +7,6 @@ class Server(object):
 
     def aggregate(self, inputs):
         self.algorithm.aggregate(self, inputs)
-        
+
     def set_algorithm(self, algorithm):
         self.algorithm = algorithm

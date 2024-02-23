@@ -78,7 +78,11 @@ class SCAFFOLD(Algorithm):
         )
         print("state_params_diff_curr = ", state_params_diff_curr)
         client.model = self.__train_model(
-            client.model, client.train_data_X, client.train_data_Y, inputs["curr_round"], state_params_diff_curr
+            client.model,
+            client.train_data_X,
+            client.train_data_Y,
+            inputs["curr_round"],
+            state_params_diff_curr,
         )
 
         curr_model_par = get_model_params([client.model], self.n_param)[

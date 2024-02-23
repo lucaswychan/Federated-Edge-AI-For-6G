@@ -236,7 +236,9 @@ def main():
         ############################################################################################################
         # get the selected clients
 
-        selected_clnts_idx = np.where(x_optim == 1)[0]  # get the index of the selected clients
+        selected_clnts_idx = np.where(x_optim == 1)[
+            0
+        ]  # get the index of the selected clients
         selected_clnts = clients_list[selected_clnts_idx]
 
         print("Selected Clients Index: {}".format(x_optim))
