@@ -4,10 +4,6 @@ import numpy as np
 import torch
 import torchvision
 import torchvision.transforms as transforms
-from scipy import io
-
-# from LEAF.utils_eval.language_utils import *
-# from LEAF.utils_eval.model_utils import *
 
 
 class DatasetObject:
@@ -49,7 +45,6 @@ class DatasetObject:
                     transform=transform,
                 )
 
-                print("mnist train len = ", len(trnset))
                 trn_load = torch.utils.data.DataLoader(
                     trnset, batch_size=len(trnset), shuffle=False, num_workers=1
                 )
@@ -129,7 +124,7 @@ class DatasetObject:
                 self.width = 32
                 self.height = 32
                 self.n_cls = 100
-                
+
             elif self.dataset == "emnist":
                 transform = transforms.Compose(
                     [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
@@ -141,13 +136,23 @@ class DatasetObject:
                     download=True,
                     transform=transform,
                 )
-                print("emnist classes = ", trnset.classes)
-                tstset = torchvision.datasets.MNIST(
+                tstset = torchvision.datasets.EMNIST(
                     root="%s/Raw" % self.data_path,
+                    split="letters",
                     train=False,
                     download=True,
                     transform=transform,
                 )
+                
+                # filter the labels with limitation of 10
+                filtered_indices = trnset.targets.clone().detach() <= 10
+                trnset.targets = trnset.targets[filtered_indices] - 1
+                trnset.data = trnset.data[filtered_indices]
+                    
+                
+                filtered_indices = tstset.targets.clone().detach() <= 10
+                tstset.targets = tstset.targets[filtered_indices] - 1
+                tstset.data = tstset.data[filtered_indices]
 
                 trn_load = torch.utils.data.DataLoader(
                     trnset, batch_size=len(trnset), shuffle=False, num_workers=1
@@ -159,65 +164,17 @@ class DatasetObject:
                 self.width = 28
                 self.height = 28
                 self.n_cls = 10
-                
 
-            if self.dataset:
-                trn_itr = trn_load.__iter__()
-                tst_itr = tst_load.__iter__()
-                # labels are of shape (n_data,)
-                trn_x, trn_y = trn_itr.__next__()
-                tst_x, tst_y = tst_itr.__next__()
+            trn_itr = trn_load.__iter__()
+            tst_itr = tst_load.__iter__()
+            # labels are of shape (n_data,)
+            trn_x, trn_y = trn_itr.__next__()
+            tst_x, tst_y = tst_itr.__next__()
 
-                trn_x = trn_x.numpy()
-                trn_y = trn_y.numpy().reshape(-1, 1)
-                tst_x = tst_x.numpy()
-                tst_y = tst_y.numpy().reshape(-1, 1)
-
-            # elif self.dataset == "emnist":
-            #     emnist = io.loadmat(self.data_path + "/Raw/matlab/emnist-letters.mat")
-            #     # load training dataset
-            #     x_train = emnist["dataset"][0][0][0][0][0][0]
-            #     x_train = x_train.astype(np.float32)
-
-            #     # load training labels
-            #     y_train = emnist["dataset"][0][0][0][0][0][1] - 1  # make first class 0
-
-            #     # take first 10 classes of letters
-            #     trn_idx = np.where(y_train < 10)[0]
-
-            #     y_train = y_train[trn_idx]
-            #     x_train = x_train[trn_idx]
-
-            #     mean_x = np.mean(x_train)
-            #     std_x = np.std(x_train)
-
-            #     # load test dataset
-            #     x_test = emnist["dataset"][0][0][1][0][0][0]
-            #     x_test = x_test.astype(np.float32)
-
-            #     # load test labels
-            #     y_test = emnist["dataset"][0][0][1][0][0][1] - 1  # make first class 0
-
-            #     tst_idx = np.where(y_test < 10)[0]
-
-            #     y_test = y_test[tst_idx]
-            #     x_test = x_test[tst_idx]
-
-            #     x_train = x_train.reshape((-1, 1, 28, 28))
-            #     x_test = x_test.reshape((-1, 1, 28, 28))
-
-            #     # normalise train and test features
-
-            #     trn_x = (x_train - mean_x) / std_x
-            #     trn_y = y_train
-
-            #     tst_x = (x_test - mean_x) / std_x
-            #     tst_y = y_test
-
-            #     self.channels = 1
-            #     self.width = 28
-            #     self.height = 28
-            #     self.n_cls = 10
+            trn_x = trn_x.numpy()
+            trn_y = trn_y.numpy().reshape(-1, 1)
+            tst_x = tst_x.numpy()
+            tst_y = tst_y.numpy().reshape(-1, 1)
 
             # Shuffle Data
             rand_perm = np.random.permutation(len(trn_y))
