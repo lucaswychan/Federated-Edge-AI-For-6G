@@ -8,7 +8,7 @@ class Model(nn.Module):
         super(Model, self).__init__()
         self.name = name
 
-        if self.name == "Linear":
+        if self.name == "linear":
             [self.n_dim, self.n_out] = args
             self.fc = nn.Linear(self.n_dim, self.n_out)
 
@@ -24,7 +24,7 @@ class Model(nn.Module):
             self.fc2 = nn.Linear(100, 100)
             self.fc3 = nn.Linear(100, self.n_cls)
 
-        elif self.name == "CIFAR10":
+        elif self.name == "cifar10":
             self.n_cls = 10
             self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=5)
             self.conv2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=5)
@@ -33,7 +33,7 @@ class Model(nn.Module):
             self.fc2 = nn.Linear(384, 192)
             self.fc3 = nn.Linear(192, self.n_cls)
 
-        elif self.name == "CIFAR100":
+        elif self.name == "cifar100":
             self.n_cls = 100
             self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=5)
             self.conv2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=5)
@@ -42,7 +42,7 @@ class Model(nn.Module):
             self.fc2 = nn.Linear(384, 192)
             self.fc3 = nn.Linear(192, self.n_cls)
 
-        elif self.name == "Resnet18":
+        elif self.name == "resnet18":
             resnet18 = models.resnet18()
             resnet18.fc = nn.Linear(512, 10)
 
@@ -84,7 +84,7 @@ class Model(nn.Module):
             self.model = resnet18
 
     def forward(self, x):
-        if self.name == "Linear":
+        if self.name == "linear":
             x = self.fc(x)
 
         elif self.name == "mnist":
@@ -99,7 +99,7 @@ class Model(nn.Module):
             x = F.relu(self.fc2(x))
             x = self.fc3(x)
 
-        elif self.name == "CIFAR10":
+        elif self.name == "cifar10":
             x = self.pool(F.relu(self.conv1(x)))
             x = self.pool(F.relu(self.conv2(x)))
             x = x.view(-1, 64 * 5 * 5)
@@ -107,7 +107,7 @@ class Model(nn.Module):
             x = F.relu(self.fc2(x))
             x = self.fc3(x)
 
-        elif self.name == "CIFAR100":
+        elif self.name == "cifar100":
             x = self.pool(F.relu(self.conv1(x)))
             x = self.pool(F.relu(self.conv2(x)))
             x = x.view(-1, 64 * 5 * 5)
@@ -115,7 +115,7 @@ class Model(nn.Module):
             x = F.relu(self.fc2(x))
             x = self.fc3(x)
 
-        elif self.name == "Resnet18":
+        elif self.name == "resnet18":
             x = self.model(x)
 
         return x

@@ -25,7 +25,7 @@ def main():
     # data for train and test
     # data_obj = ShakespeareObjectCrop_noniid(storage_path, dataset_prefix)
     unbalanced_sgm = 0
-    if args.rule == "Dirichlet":
+    if args.rule == "dirichlet":
         unbalanced_sgm = 1.0
     data_obj = DatasetObject(
         dataset=args.model_name,
@@ -379,6 +379,7 @@ def main():
         args.model_name,
         args.n_clients,
         args.noiseless,
+        args.rule,
     )
 
 

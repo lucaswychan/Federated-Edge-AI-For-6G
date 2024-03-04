@@ -94,6 +94,7 @@ def save_performance(
     model_name,
     n_clients,
     noiseless,
+    iid_str
 ):
     plt.figure(figsize=(6, 5))
     plt.plot(
@@ -124,12 +125,13 @@ def save_performance(
         bbox_inches="tight",
     )
     np.save(
-        "Output/{}/{}_{}cln_{}comm_{}_{}_tst_perf_all.npy".format(
+        "Output/{}/{}_{}cln_{}comm_{}_{}_{}_tst_perf_all.npy".format(
             data_obj_name,
             algorithm_name,
             n_clients,
             communication_rounds,
             "noiseless" if noiseless else "noisy",
+            iid_str.lower(),
             model_name,
         ),
         tst_perf_all,

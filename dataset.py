@@ -56,7 +56,7 @@ class DatasetObject:
                 self.height = 28
                 self.n_cls = 10
 
-            elif self.dataset == "CIFAR10":
+            elif self.dataset == "cifar10":
                 transform = transforms.Compose(
                     [
                         transforms.ToTensor(),
@@ -79,7 +79,6 @@ class DatasetObject:
                     transform=transform,
                 )
 
-                print("CIFAR10 train len = ", len(trnset))
                 trn_load = torch.utils.data.DataLoader(
                     trnset, batch_size=len(trnset), shuffle=False, num_workers=1
                 )
@@ -91,7 +90,7 @@ class DatasetObject:
                 self.height = 32
                 self.n_cls = 10
 
-            elif self.dataset == "CIFAR100":
+            elif self.dataset == "cifar100":
                 print(self.dataset)
                 # mean and std are validated here: https://gist.github.com/weiaicunzai/e623931921efefd4c331622c344d8151
                 transform = transforms.Compose(
@@ -210,7 +209,7 @@ class DatasetObject:
                 clnt_data_list = (np.ones(self.n_client) * n_data_per_clnt).astype(int)
             ###
 
-            if self.rule == "Dirichlet":
+            if self.rule == "dirichlet":
                 cls_priors = np.random.dirichlet(
                     alpha=[self.rule_arg] * self.n_cls, size=self.n_client
                 )
@@ -265,7 +264,7 @@ class DatasetObject:
 
             elif (
                 self.rule == "iid"
-                and self.dataset == "CIFAR100"
+                and self.dataset == "cifar100"
                 and self.unbalanced_sgm == 0
             ):
                 assert len(trn_y) // 100 % self.n_client == 0
@@ -380,12 +379,12 @@ class DatasetObject:
                 self.width = 28
                 self.height = 28
                 self.n_cls = 10
-            elif self.dataset == "CIFAR10":
+            elif self.dataset == "cifar10":
                 self.channels = 3
                 self.width = 32
                 self.height = 32
                 self.n_cls = 10
-            elif self.dataset == "CIFAR100":
+            elif self.dataset == "cifar100":
                 self.channels = 3
                 self.width = 32
                 self.height = 32
@@ -572,7 +571,7 @@ class Dataset(torch.utils.data.Dataset):
             if not isinstance(data_y, bool):
                 self.y_data = torch.tensor(data_y).float()
 
-        elif self.name == "CIFAR10" or self.name == "CIFAR100":
+        elif self.name == "cifar10" or self.name == "cifar100":
             self.train = train
             self.transform = transforms.Compose([transforms.ToTensor()])
 
@@ -602,7 +601,7 @@ class Dataset(torch.utils.data.Dataset):
                 y = self.y_data[idx]
                 return X, y
 
-        elif self.name == "CIFAR10" or self.name == "CIFAR100":
+        elif self.name == "cifar10" or self.name == "cifar100":
             img = self.X_data[idx]
             if self.train:
                 img = (

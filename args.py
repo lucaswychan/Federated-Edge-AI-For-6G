@@ -40,7 +40,7 @@ def args_parser():
         "--max_norm", type=float, default=10, help="max norm for gradient clipping"
     )
 
-    parser.add_argument("--model_name", type=str, default="CIFAR10", help="model name")
+    parser.add_argument("--model_name", type=str, default="cifar10", help="model name")
 
     parser.add_argument(
         "--rule", type=str, default="iid", help="the rule of data partitioning"
