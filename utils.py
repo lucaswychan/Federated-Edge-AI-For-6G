@@ -94,7 +94,7 @@ def save_performance(
     model_name,
     n_clients,
     noiseless,
-    iid_str
+    iid_str,
 ):
     plt.figure(figsize=(6, 5))
     plt.plot(

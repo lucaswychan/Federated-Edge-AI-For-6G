@@ -142,13 +142,12 @@ class DatasetObject:
                     download=True,
                     transform=transform,
                 )
-                
+
                 # filter the labels with limitation of 10
                 filtered_indices = trnset.targets.clone().detach() <= 10
                 trnset.targets = trnset.targets[filtered_indices] - 1
                 trnset.data = trnset.data[filtered_indices]
-                    
-                
+
                 filtered_indices = tstset.targets.clone().detach() <= 10
                 tstset.targets = tstset.targets[filtered_indices] - 1
                 tstset.data = tstset.data[filtered_indices]
