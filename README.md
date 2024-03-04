@@ -163,8 +163,8 @@ For more details you can visit ```args.py```
 | epoch   | local epoch for client training   |5   |int   | [1, inf) | 
 | weight_decay   | weight decay  |0.01   |float   | (0, inf) | 
 | max_norm   | max norm for gradient clipping   |10.0   |float  | (0, inf) | 
-| model_name   | model for training. The name is also the corresponding dataset name   |CIFAR10   |str   | Linear, mnist, emnist, CIFAR10, CIFAR100, Resnet18, shakespeare |
-| rule   | the rule of data partitioning   |iid   |str   |iid, Dirichlet |
+| model_name   | model for training. The name is also the corresponding dataset name   |cifar10   |str   | linear, mnist, emnist, cifar10, cifar100, resnet18, shakespeare |
+| rule   | the rule of data partitioning   |iid   |str   |iid, dirichlet |
 |  rand_seed  | random seed   |1   |int   | [0, inf) | 
 | save_period   | period to save the models   |1   |int   | [1, comm_rounds] |
 | print_per   | period to print the training result   |5   |int   | [1, epoch] | 
