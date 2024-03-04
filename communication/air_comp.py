@@ -19,6 +19,8 @@ class AirComp(object):
         self.n_receive_ant = n_receive_ant
         self.weight_list = weight_list
         self.transmit_power = transmit_power
+        
+        self.need_air_comp = True
 
     def transmit(self, d, signal, x, f, h, sigma):
         index = x == 1
@@ -54,4 +56,4 @@ class AirComp(object):
         y = h[:, index] @ x_signal + n
         w = np.real((f.conj() @ y / eta_sqrt + g_bar)) / np.sum(K)  # (11)
 
-        return w
+        return w if self.need_air_comp else y
