@@ -34,8 +34,8 @@ class Algorithm:
 
     @abstractmethod
     def local_train(self):
-        pass
+        raise NotImplementedError(f"Subclass {self.__class__.__name__} must implement this method for client local training.")
 
     @abstractmethod
     def aggregate(self):
-        pass
+        raise NotImplementedError(f"Subclass {self.__class__.__name__} must implement this method for server aggregation.")
