@@ -14,6 +14,8 @@
 ## Abstract
 Federated Learning (FL) is a decentralized approach to machine learning that addresses the crucial issue of data privacy. However, decentralization presents challenges such as data and system heterogeneity, as well as communication channel difficulties. By tapping into the potential of state-of-the-art 6G technology and leveraging advancements in FL computation algorithms, it is possible to effectively overcome the computational and communication complexities inherent in the FL system. Techniques such as FedDyn (Federated Dynamic Regularization) and RIS-FL (Reconfigurable Intelligence Surface-assisted Federated Learning) have been chosen to address the computation and communication problems resulting from the decentralization of FL, with named RIS-AirFedDyn. Through these methods, it is possible to enhance the efficiency and performance of FL systems while maintaining data privacy and security.
 
+<hr/>
+
 ## Credit
 <div style="font-size:1rem">
 <a href="https://arxiv.org/abs/2111.04263">
@@ -36,6 +38,8 @@ Federated Learning (FL) is a decentralized approach to machine learning that add
 </p>
 </div>
 
+<hr/>
+
 ## Dependencies
 * Python >= 3.6
 * numpy==1.21.6 (For Dirichlet Case)
@@ -49,6 +53,8 @@ Or you can install all the packages via
 pip install -r requirements.txt
 ```
 
+<hr/>
+
 ## Instructions
 There are four algorithms available to play with, which are FedDyn, FedAvg, FedProx, and SCAFFOLD  
 The default algorithm is FedDyn, but you can feel free to change the algorithm by adding ```--algorithm_name={FedAvg, FedProx, FedDyn, SCAFFOLD}```  
@@ -57,6 +63,8 @@ For more details on the parameters, please visit [Parameters](#parameters)
 ```
 python3 fl_main.py
 ```
+
+<hr/>
 
 ## Add new algorithm
 This whole code structure enjoys the advantage OOP brings, so adding new algorithms on top of the existing codes is a piece of cake.
@@ -148,6 +156,8 @@ if args.algorithm_name == "FedSplit":
 6. Have fun to play with your algorithm !
 <br></br>
 
+<hr/>
+
 ## Parameters
 There are various parameters required by the algorithms. 
 For more details you can visit ```args.py```
@@ -179,3 +189,5 @@ For more details you can visit ```args.py```
 | threshold   | epsilon, SCA early stopping criteria   |0.01   |float   | [0, inf) | 
 | transmit_power   | transmit power of clients   |0.003   |float   | [0, inf) | 
 | noiseless   | whether the channel is noiseless   |False   |bool   | True, False | 
+
+<hr/>
