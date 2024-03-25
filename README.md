@@ -5,6 +5,9 @@
   <a href="https://en.wikipedia.org/wiki/Federated_learning">
     <img src="https://img.shields.io/badge/Federated%20Learning-3333FF?style=for-the-badge&logoColor=white" alt="FL">
   </a>
+  <a href="https://arxiv.org/pdf/2102.00742.pdf">
+    <img src="https://img.shields.io/badge/RIS-00CC66?style=for-the-badge&logoColor=white" alt="RIS">
+  </a>
 </div>
 
 <hr/>
