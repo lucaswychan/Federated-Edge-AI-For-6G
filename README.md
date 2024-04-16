@@ -166,7 +166,7 @@ There are various parameters required by the algorithms.
 For more details you can visit ```args.py```
 | Parameter Name  | Meaning| Default Value| Type | Choice/Range |
 | ---------- | -----------|-----------|-----------|-----------|
-| algorithm_name   | algorithm for training   |FedDyn   |str   | FedDyn, FedAvg, FedProx, SCAFFOLD |
+| algorithm_name   | algorithm for training   |FedDyn   |str   | {FedDyn, FedAvg, FedProx, SCAFFOLD} |
 |  n_clients  | number of clients   | 30  |int   | [1, inf) | 
 | comm_rounds   | number of communication rounds   |50   |int   | [1, inf) | 
 | lr   | learning rate   |0.03   |float   | (0, inf) | 
@@ -176,8 +176,8 @@ For more details you can visit ```args.py```
 | epoch   | local epoch for client training   |5   |int   | [1, inf) | 
 | weight_decay   | weight decay  |0.01   |float   | (0, inf) | 
 | max_norm   | max norm for gradient clipping   |10.0   |float  | (0, inf) | 
-| model_name   | model for training. The name is also the corresponding dataset name   |cifar10   |str   | linear, mnist, emnist, cifar10, cifar100, resnet18, shakespeare |
-| rule   | the rule of data partitioning   |iid   |str   |iid, dirichlet |
+| model_name   | model for training. The name is also the corresponding dataset name   |cifar10   |str   | {linear, mnist, emnist, cifar10, cifar100, resnet18, shakespeare} |
+| rule   | the rule of data partitioning   |iid   |str   | {iid, dirichlet} |
 |  rand_seed  | random seed   |1   |int   | [0, inf) | 
 | save_period   | period to save the models   |1   |int   | [1, comm_rounds] |
 | print_per   | period to print the training result   |5   |int   | [1, epoch] | 
@@ -191,7 +191,7 @@ For more details you can visit ```args.py```
 | nit   | I_max, number of maximum SCA loops   |100   |int   | [1, inf) | 
 | threshold   | epsilon, SCA early stopping criteria   |0.01   |float   | [0, inf) | 
 | transmit_power   | transmit power of clients   |0.003   |float   | [0, inf) | 
-| noiseless   | whether the channel is noiseless   |False   |bool   | True, False | 
+| noiseless   | whether the channel is noiseless   |False   |bool   | {True, False} | 
 | rison   | whether the RIS is presented   |1   |int   | {0, 1} | 
 
 <hr/>
