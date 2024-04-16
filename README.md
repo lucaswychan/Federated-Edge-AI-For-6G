@@ -192,5 +192,6 @@ For more details you can visit ```args.py```
 | threshold   | epsilon, SCA early stopping criteria   |0.01   |float   | [0, inf) | 
 | transmit_power   | transmit power of clients   |0.003   |float   | [0, inf) | 
 | noiseless   | whether the channel is noiseless   |False   |bool   | True, False | 
+| rison   | whether the RIS is presented   |1   |int   | {0, 1} | 
 
 <hr/>
