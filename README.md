@@ -195,3 +195,8 @@ For more details you can visit ```args.py```
 | rison   | whether the RIS is presented   |1   |int   | {0, 1} | 
 
 <hr/>
+
+## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+<hr/>
