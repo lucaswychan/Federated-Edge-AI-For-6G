@@ -1,47 +1,26 @@
 <div align="center">
-  <a href="https://pytorch.org/">
-    <img src="https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=for-the-badge&logo=PyTorch&logoColor=white" alt="PyTorch">
-  </a>
-  <a href="https://en.wikipedia.org/wiki/Federated_learning">
-    <img src="https://img.shields.io/badge/Federated%20Learning-3333FF?style=for-the-badge&logoColor=white" alt="FL">
-  </a>
-  <a href="https://arxiv.org/pdf/2102.00742.pdf">
-    <img src="https://img.shields.io/badge/RIS-00CC66?style=for-the-badge&logoColor=white" alt="RIS">
-  </a>
+  
+[![PyTorch](https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=for-the-badge&logo=PyTorch&logoColor=white)](https://pytorch.org/)
+[![Federated Learning](https://img.shields.io/badge/Federated%20Learning-3333FF?style=for-the-badge&logoColor=white)](https://en.wikipedia.org/wiki/Federated_learning)
+[![RIS](https://img.shields.io/badge/RIS-00CC66?style=for-the-badge&logoColor=white)](https://arxiv.org/pdf/2102.00742.pdf)
 </div>
 
-<hr/>
 
 # Federated Edge AI for 6G
 
 ## Abstract
 Federated Learning (FL) is a decentralized approach to machine learning that addresses the crucial issue of data privacy. However, decentralization presents challenges such as data and system heterogeneity, as well as communication channel difficulties. By tapping into the potential of state-of-the-art 6G technology and leveraging advancements in FL computation algorithms, it is possible to effectively overcome the computational and communication complexities inherent in the FL system. Techniques such as FedDyn (Federated Dynamic Regularization) and RIS-FL (Reconfigurable Intelligence Surface-assisted Federated Learning) have been chosen to address the computation and communication problems resulting from the decentralization of FL, with named RIS-AirFedDyn. Through these methods, it is possible to enhance the efficiency and performance of FL systems while maintaining data privacy and security.
 
-<hr/>
 
 ## Credit
-<div style="font-size:1rem">
-<a href="https://arxiv.org/abs/2111.04263">
-  Federated Learning Based on Dynamic Regularization
-</a>
-<p>
-  Code :  &nbsp 
-  <a href="https://github.com/AntixK/FedDyn">
-     FedDyn
-  </a>
-</p>
-<a href="https://arxiv.org/abs/2011.10282">
-  Reconfigurable Intelligent Surface Enabled Federated Learning: A Unified Communication-Learning Design Approach
-</a>
-<p>
-  Code :  &nbsp 
-  <a href="https://github.com/liuhang1994/RIS-FL">
-     RIS-FL
-  </a>
-</p>
-</div>
+Federated Learning Based on Dynamic Regularization  
+[Paper](https://arxiv.org/abs/2111.04263)  
+[Codes](https://github.com/AntixK/FedDyn)
 
-<hr/>
+Reconfigurable Intelligent Surface Enabled Federated Learning: A Unified Communication-Learning Design Approach  
+[Paper](https://arxiv.org/abs/2011.10282)  
+[Codes](https://github.com/liuhang1994/RIS-FL)
+
 
 ## Dependencies
 * Python >= 3.6
@@ -56,7 +35,6 @@ Or you can install all the packages via
 pip install -r requirements.txt
 ```
 
-<hr/>
 
 ## Instructions
 There are four algorithms available to play with, which are FedDyn, FedAvg, FedProx, and SCAFFOLD  
@@ -67,7 +45,6 @@ For more details on the parameters, please visit [Parameters](#parameters)
 python3 fl_main.py
 ```
 
-<hr/>
 
 ## Add new algorithm
 This whole code structure enjoys the advantage OOP brings, so adding new algorithms on top of the existing codes is a piece of cake.
@@ -159,7 +136,6 @@ if args.algorithm_name == "FedSplit":
 6. Have fun to play with your algorithm !
 <br></br>
 
-<hr/>
 
 ## Parameters
 There are various parameters required by the algorithms. 
@@ -194,9 +170,7 @@ For more details you can visit ```args.py```
 | noiseless   | whether the channel is noiseless   |False   |bool   | {True, False} | 
 | rison   | whether the RIS is presented   |1   |int   | {0, 1} | 
 
-<hr/>
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-<hr/>
