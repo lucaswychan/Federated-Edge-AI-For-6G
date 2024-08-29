@@ -15,7 +15,7 @@ Federated Learning (FL) is a decentralized approach to machine learning that add
 ## Credit
 Federated Learning Based on Dynamic Regularization  
 [Paper](https://arxiv.org/abs/2111.04263)  
-[Codes](https://github.com/AntixK/FedDyn)
+[Codes](https://github.com/alpemreacar/FedDyn)
 
 Reconfigurable Intelligent Surface Enabled Federated Learning: A Unified Communication-Learning Design Approach  
 [Paper](https://arxiv.org/abs/2011.10282)  
