@@ -1,11 +1,3 @@
-<div align="center">
-  
-[![PyTorch](https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=for-the-badge&logo=PyTorch&logoColor=white)](https://pytorch.org/)
-[![Federated Learning](https://img.shields.io/badge/Federated%20Learning-3333FF?style=for-the-badge&logoColor=white)](https://en.wikipedia.org/wiki/Federated_learning)
-[![RIS](https://img.shields.io/badge/RIS-00CC66?style=for-the-badge&logoColor=white)](https://arxiv.org/pdf/2102.00742.pdf)
-</div>
-
-
 # Federated Edge AI for 6G
 
 ## Abstract
